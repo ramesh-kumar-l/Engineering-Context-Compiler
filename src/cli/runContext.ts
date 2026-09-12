@@ -5,6 +5,7 @@ import { retrieveEvidence } from '../core/evidence/evidenceRetriever.js'
 import { rankEvidence } from '../core/evidence/evidenceRanker.js'
 import { compileContext } from '../core/compilation/contextCompiler.js'
 import { DEFAULT_TOKEN_BUDGET } from '../core/compilation/tokenBudget.js'
+import { loadOutcomeAdjustments } from '../core/intelligence/outcomeFeedback.js'
 import { resolveRepositoryRef } from './repositoryRef.js'
 import type { EngineeringTask } from '../core/types/task.js'
 import type { EngineeringContextPackage } from '../core/types/contextPackage.js'
@@ -31,8 +32,9 @@ export async function runContext(
   const classification = classifyTask(request)
   const task: EngineeringTask = { type: classification.type, request }
 
-  const candidateEvidence = retrieveEvidence(task, repository)
-  const rankedEvidence = rankEvidence(candidateEvidence)
+  const outcomeAdjustments = loadOutcomeAdjustments(rootDir)
+  const candidateEvidence = retrieveEvidence(task, repository, outcomeAdjustments)
+  const rankedEvidence = rankEvidence(candidateEvidence, outcomeAdjustments)
 
   return compileContext(task, repositoryRef, rankedEvidence, {
     tokenBudget: options.tokenBudget ?? DEFAULT_TOKEN_BUDGET,

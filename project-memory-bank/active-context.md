@@ -8,91 +8,90 @@ _Last updated: 2026-09-12_
 
 ## Current phase
 
-**Phase 15 — Verification Intelligence**: Complete.
+**Phase 16 — Engineering Intelligence**: Complete. **All 16 phases in the master prompt's
+recommended sequence are now complete.**
 
 ## What just happened
 
-Added `src/core/verification/` — a small, genuinely new core component (like Phase 14's
-memory engine, not a thin client):
+Added `src/core/intelligence/` — the smallest new core component yet, closing Section 72's
+feedback loop:
 
-1. `src/core/verification/types.ts` — `RISK_LEVELS` (`low`/`medium`/`high`),
-   `RiskAssessment { level, score, factors }`.
-2. `src/core/verification/riskAssessor.ts` — `assessRisk(task, primary, supporting,
-   conflicts)` scores risk purely from signals earlier phases already compute: task-type
-   weight (behavior-changing types like `modify`/`refactor` score higher), missing test
-   coverage for touched code, low-trust (`inference`/`unknown`) primary evidence, Phase 7's
-   surfaced conflicts, and blast radius (primary evidence count). Deterministic and rule-based
-   (same style as Phase 3's `classifyTask`), not learned.
-3. `src/core/verification/verificationPlanner.ts` — `planVerification(...)` calls `assessRisk`
-   then returns a step list always led by `Risk: <level> (<factors>)`, layering on stricter
-   steps as risk rises (run existing tests / flag missing coverage always; manually verify at
-   medium+; peer review + resolve conflicts at high).
-4. `contextCompiler.ts` now calls `planVerification()` once and assigns the result to
-   `EngineeringContextPackage.verification` — a field that existed since Phase 1's schema but
-   was always `[]` until now. No schema/type change needed.
+1. `src/core/memory/types.ts` — `MemoryEntry` (Phase 14) gained one new optional field,
+   `signal?: 'positive'|'negative'` (`MEMORY_OUTCOME_SIGNALS`), meaningful only on
+   `type: 'outcome'` entries.
+2. `src/core/intelligence/outcomeFeedback.ts` — `computeOutcomeAdjustments(entries)` reduces
+   persisted memory entries to a `Map<path, number>`: each signaled `outcome` entry contributes
+   +-1 to every one of its `relatedPaths`, summed and capped at +-2 per path so no single path's
+   history can dominate. `loadOutcomeAdjustments(repoRoot)` is a convenience wrapper for
+   pipeline orchestrators.
+3. `src/core/evidence/evidenceRanker.ts` and `src/core/memory/memoryRetriever.ts` each gained
+   one new optional, default-empty `outcomeAdjustments: Map<string, number>` parameter — a
+   small additive nudge to rank score / memory relevance respectively. **Neither module imports
+   from `core/intelligence`** — they only consume the plain map, keeping the dependency
+   one-directional (intelligence depends on memory, not the reverse).
+4. `src/cli/runContext.ts` and `src/core/evaluation/evaluationRunner.ts` (the two pipeline
+   orchestrators) load the map once per run and thread it through both `retrieveEvidence` and
+   `rankEvidence`, so every surface (CLI/MCP/VS Code/GitHub, all of which call `runContext`
+   transitively) gets the feedback loop for free.
+5. `ecc memory` gained a new `--signal positive|negative` CLI flag (`argv.ts`,
+   `memoryCommand.ts`) — the write side of the loop, validated the same way `--type` already is.
 
-Satisfies Phase 15's exit criteria directly: every `ecc context` call (and MCP/VS Code/GitHub,
-since they all call `compileContext` transitively via `runContext`) now returns a real,
-risk-scaled verification plan instead of an empty array — with zero changes to any of those
-surfaces. Phase 13's `renderMarkdownReport` already had a "Suggested verification" section
-(previously always empty); it now renders real content automatically.
+Satisfies Phase 16's exit criteria directly: recording an `outcome` entry with `--signal
+negative --paths <path>` measurably lowers that path's future rank score and any memory entry's
+relevance tied to the same path in the very next compilation — outcomes now feed back into
+ranking/memory quality over time. Verified end-to-end against the **built**
+`dist/cli/index.js`: recorded a decision (relevance 1.0 for a matching request), recorded a
+negative outcome against the same path, re-ran the identical request, confirmed relevance
+dropped to exactly 0.9 with no spurious second memory item.
 
-**Bug caught during the built-binary smoke test, fixed before it shipped**: the first version
-of `assessRisk` added the task-type weight to the score but never listed it as a `factor`, so
-a `refactor` task alone reached "medium" risk while the message read "Risk: medium (no
-elevated risk factors detected)" — self-contradictory. Fixed by pushing a
-`task type '<type>' inherently carries elevated risk` factor whenever the task-type weight is
-non-zero. Caught by actually running the built CLI against the fixture repo, not just unit
-tests — same verification discipline as every prior phase.
+Updated `04-decisions.md` (#22), `02-architecture.md` (candidate list + new descriptive
+paragraph), `05-roadmap.md` (Phase 16 → complete, "Next recommended phase" → none, all 16
+phases done), and `implementation-status.md` (directory tree, new Phase 16 section, "Explicitly
+NOT built yet", "Next module to build").
 
-Updated `04-decisions.md` (#21), `02-architecture.md` (candidate list + new descriptive
-paragraph), `05-roadmap.md` (Phase 15 → complete, Phase 16 recommended next), and
-`implementation-status.md` (directory tree, new Phase 15 section, "Explicitly NOT built yet",
-"Next module to build").
-
-Verified: `npm run typecheck`, `npm run lint`, `npm test` (168/168 passing, 41 test files, up
-from 156/39 — 12 new tests across 2 new test files plus 2 additive assertions in
-`contextCompiler.test.ts`), `npm run build`, `npm audit` all green. No new runtime dependency.
-New files ≤74 lines (`riskAssessor.ts`). Smoke-tested the **built** `dist/cli/index.js` twice
-(a `refactor` task and an `explain` task against the fixture repo, confirming the plan's
-length/content actually scales with risk) and confirmed `renderMarkdownReport` renders the
-result correctly.
+Verified: `npm run typecheck`, `npm run lint`, `npm test` (191/191 passing, 43 test files, up
+from 168/41 — 23 new tests across 2 new test files plus additive assertions in 3 existing test
+files), `npm run build`, `npm audit` all green. No new runtime dependency. New files ≤49 lines
+(`outcomeFeedback.ts`). Smoke-tested the **built** `dist/cli/index.js` end-to-end as described
+above.
 
 ## In progress
 
-Nothing — Phase 15 closed out cleanly. Awaiting user authorization to plan Phase 16.
+Nothing — Phase 16 closed out cleanly, and with it the full 16-phase roadmap. Awaiting user
+direction on what (if anything) comes next; no further phase is pre-authorized (Rule 3/5).
 
 ## Next task
 
-Per [[05-roadmap]], the next gated phase is **Phase 16 — Engineering Intelligence**: close
-Section 72's feedback loop at least once (outcomes feed back into ranking/memory quality over
-time). Requires explicit authorization before planning/implementation begins (Rule 3).
+None gated. Per [[05-roadmap]], all 16 phases are complete. Any future work (richer outcome
+signals, a learned re-weighting model once real outcome volume exists, exposing memory/outcome
+recording via MCP/VS Code/GitHub, addressing any item in the "Open questions" list below) is an
+enhancement to an existing phase and requires its own explicit authorization before
+implementation begins.
 
 ## Open questions carried forward
 
 - `SOURCE_AUTHORITY_WEIGHT` (Phase 5), `DEFAULT_TOKEN_BUDGET`/`MAX_SYMBOLS_PER_ITEM` (Phase 6),
-  and now Phase 15's risk-scoring thresholds (`MEDIUM_SCORE_FLOOR`/`HIGH_SCORE_FLOOR`/
-  `LARGE_PRIMARY_SET_SIZE`) remain hand-picked static values. Phase 11's evaluation harness
-  could tune these against measured metrics once more benchmark tasks/repos exist to tune
-  against without overfitting — and Phase 16's feedback loop is the more natural mechanism for
-  the risk thresholds specifically, once real outcome data exists.
+  and Phase 15's risk-scoring thresholds (`MEDIUM_SCORE_FLOOR`/`HIGH_SCORE_FLOOR`/
+  `LARGE_PRIMARY_SET_SIZE`) remain hand-picked static values that Phase 16's feedback loop does
+  **not** touch — it only adjusts `evidenceRanker.ts`'s rank score and `memoryRetriever.ts`'s
+  relevance, not the authority table, token budget, or risk thresholds themselves. A future
+  enhancement could feed accumulated outcome history into those too, once real volume exists.
 - Conflict detection (Phase 7) is structural only - same subject (path/identifier) with a
   differing `trustLevel`. Still a known gap, not a regression.
 - The trust rule table (`classifyTrust`, Phase 7) is static and per-source-type - not learned,
-  not user-configurable yet. Still worth revisiting alongside Phase 16.
-- The CLI now has two commands (`context`, `memory` as of Phase 14) and one output format
-  (pretty JSON) - no `--help`/`--version`, no machine-compact output mode.
-- The Phase 9 skill doc mentions `ecc memory` (Phase 14) but still doesn't mention the Phase 10
-  MCP tool or the Phase 12 VS Code command as alternatives to shelling out to the CLI, and does
-  not yet mention that `verification` is now populated - `skills/ecc-context/SKILL.md` should
-  be revisited for both gaps.
+  not user-configurable yet, and not touched by Phase 16's feedback loop either.
+- The CLI now has two commands (`context`, `memory`) and one output format (pretty JSON) - no
+  `--help`/`--version`, no machine-compact output mode.
+- The Phase 9 skill doc mentions `ecc memory` and the new `--signal` flag but still doesn't
+  mention the Phase 10 MCP tool or the Phase 12 VS Code command as alternatives to shelling out
+  to the CLI - `skills/ecc-context/SKILL.md` should be revisited for that gap.
 - The MCP server exposes exactly one tool over stdio only - no resources/prompts, no HTTP/SSE
   transport, no auth, and no workspace-root sandboxing beyond what the OS/filesystem already
   enforces on the `path` argument. Revisit if a hosted/remote MCP deployment is ever required.
 - The Phase 11 "agent alone" baseline is a simulated heuristic, not a real second AI agent -
   see [[04-decisions]] #17. The benchmark also has only three tasks, all against this one
   repository - no unseen-repo/temporal-holdout/adversarial coverage yet, and none of them
-  measure verification-plan quality (Phase 15 has no evaluation-harness coverage yet).
+  measure verification-plan quality or outcome-feedback effects.
 - The Phase 12 VS Code extension has no `@vscode/test-electron` end-to-end test - only a
   mocked-`vscode` unit-test suite plus a documented manual F5 smoke-test procedure. It is not
   packaged as a `.vsix` or published to the Marketplace, and the preview webview has no
@@ -112,11 +111,17 @@ time). Requires explicit authorization before planning/implementation begins (Ru
   cross-repository sharing, and matches purely by keyword overlap (not embedding/semantic
   similarity) - a relevant entry phrased very differently from a new task's request can be
   missed. The CLI is the only write surface; MCP/VS Code/GitHub don't expose recording memory
-  yet (see [[04-decisions]] #20). The schema's `history: HistoricalClaim[]` field remains
-  defined but always empty - deliberately not used by this phase.
+  (or the new `--signal` flag) yet (see [[04-decisions]] #20). The schema's
+  `history: HistoricalClaim[]` field remains defined but always empty - deliberately not used.
 - Phase 15's risk assessment is a static rule table (see [[04-decisions]] #21) with no learned
-  component, no awareness of the actual diff/change being made (it reasons only over compiled
-  evidence + conflicts + task type), and doesn't distinguish "no tests exist at all" from
-  "tests exist but weren't retrieved as evidence." The risk level is only exposed as text
-  inside `verification[0]`, not as a structured schema field - `assessRisk`/`RiskAssessment`
-  are exported for a future surface that wants the structured form without string-parsing.
+  component, no awareness of the actual diff/change being made, and doesn't distinguish "no
+  tests exist at all" from "tests exist but weren't retrieved as evidence." The risk level is
+  only exposed as text inside `verification[0]`, not as a structured schema field.
+- Phase 16's feedback loop (see [[04-decisions]] #22) is a static, deterministic accumulator
+  (+-1 per signal, capped at +-2 per path) - not learned/trained, since no meaningful outcome
+  volume exists yet. It keys on **exact path string equality** (a file rename silently drops
+  accumulated history for the old path - no fuzzy/related-file matching), only the CLI can
+  record `--signal`, and it feeds only ranking/memory relevance - it does not adjust Phase 15's
+  risk thresholds, Phase 5's authority weights, or Phase 7's trust classification. If real
+  outcome-recording volume ever grows, revisit whether a learned re-weighting model (explicitly
+  deferred at Phases 11/13/16 for lack of training data) is now justified.

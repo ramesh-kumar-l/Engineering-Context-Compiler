@@ -4,7 +4,7 @@ name: implementation-status
 
 # Implementation Status
 
-_Last updated: 2026-09-12 (Phase 15)_
+_Last updated: 2026-09-12 (Phase 16)_
 
 Update this file at the end of every major feature — it is the compressed "what actually
 exists" record so future tasks don't have to re-derive it by reading source.
@@ -60,6 +60,7 @@ src/
     evaluation/            # Phase 11: agent-alone-vs-agent+ECC metrics engine (see table below)
     memory/                 # Phase 14: engineering memory store + retriever (see table below)
     verification/           # Phase 15: risk assessment + verification planning (see table below)
+    intelligence/           # Phase 16: outcome-feedback reducer (see table below)
     index.ts              # barrel
   cli/                   # Phase 8: ecc CLI (see table below)
   mcp/                   # Phase 10: MCP server (see table below)
@@ -87,6 +88,7 @@ test/
   github/                   # Phase 13: unit + fixture-repo integration tests for src/github/
   memory/                   # Phase 14: unit + isolated-temp-repo integration tests for src/core/memory/
   verification/             # Phase 15: unit tests for src/core/verification/
+  intelligence/             # Phase 16: unit + isolated-temp-repo integration tests for src/core/intelligence/
   fixtures/sample-repo/    # static fixture dir analyzed end-to-end by repositoryAnalyzer.test.ts
   fixtures/task-requests.json  # 54 labeled {request, expected TaskType} examples
   fixtures/pull-request-event.json  # sample GitHub Actions pull_request event payload
@@ -527,6 +529,50 @@ files, up from 156/39 — 12 new tests across 2 new test files plus 2 additive a
 lint/typecheck errors, 0 npm audit vulnerabilities, **no new runtime dependency**. New files
 ≤74 lines (`riskAssessor.ts`).
 
+## Implemented (Phase 16 — Engineering Intelligence)
+
+| Module | Path | What it does |
+|---|---|---|
+| Outcome feedback | `src/core/intelligence/outcomeFeedback.ts` | `computeOutcomeAdjustments(entries)` — reduces Phase 14 memory entries to a `Map<path, number>`: each `type: 'outcome'` entry carrying the new `signal: 'positive'\|'negative'` field contributes +-1 to every one of its `relatedPaths`, summed and capped at +-`OUTCOME_ADJUSTMENT_CAP` (2) per path; `loadOutcomeAdjustments(repoRoot)` — convenience wrapper that loads a repo's memory and reduces it in one call |
+
+`MemoryEntry` (Phase 14) gained one new optional field, `signal?: 'positive'\|'negative'`
+(`MEMORY_OUTCOME_SIGNALS`), meaningful only on `outcome` entries. `ecc memory` gained a new
+`--signal positive|negative` flag (`argv.ts`, `memoryCommand.ts`) — the write side of the loop.
+`evidenceRanker.ts` (Phase 5) and `memory/memoryRetriever.ts` (Phase 14) each gained one new
+optional, default-empty `outcomeAdjustments: Map<string, number>` parameter: `computeRankScore`/
+`rankEvidence` add a small (+-0.1 max) nudge to an item's rank score keyed by its `path`;
+`retrieveMemoryEvidence` adds a small (+-0.2 max) nudge to a matched entry's relevance, averaged
+across its `relatedPaths`. Neither module imports from `core/intelligence` — they only consume
+the plain `Map`, so the dependency runs one way. `runContext.ts` and `evaluationRunner.ts` (the
+two pipeline orchestrators) load the map once via `loadOutcomeAdjustments(rootDir)` and thread
+it through both `retrieveEvidence` and `rankEvidence`.
+
+Satisfies Phase 16's exit criteria directly: recording `ecc memory --type outcome --signal
+negative --paths <path>` measurably lowers that path's future rank score and any memory entry's
+relevance tied to the same path in the very next `ecc context` compilation (and MCP/VS Code/
+GitHub, since they all call `runContext` transitively) — closing Section 72's feedback loop at
+least once. Verified end-to-end against the **built** `dist/cli/index.js`: recorded a decision
+entry (relevance 1.0 against a matching request), recorded a negative outcome entry against the
+same path, re-ran the identical `context` request, and confirmed the decision's relevance
+dropped to exactly 0.9 with no spurious second memory item. See [[04-decisions]] #22.
+
+Tested with: unit tests for `computeOutcomeAdjustments` (no entries, decision/incident entries
+ignored even with a signal, signal-less outcome entries ignored, path-less outcome entries
+ignored, positive/negative accumulation, capping at +-2 across many entries) and
+`loadOutcomeAdjustments` (empty repo, reflects a freshly recorded entry) using isolated
+`mkdtemp` temp repos; extended `evidenceRanker.test.ts` (unchanged ordering with no adjustments
+passed, positive adjustment promotes an item, negative demotes one, outcome feedback never
+overrides the source-authority gap, no-path items don't throw); extended
+`memoryRetriever.test.ts` (boosted/penalized relevance, clamped to at most 1, unchanged when no
+adjustments passed); extended `argv.test.ts`/`memoryCommand.test.ts` for `--signal` parsing and
+validation; one true end-to-end integration test (`runContext` against an isolated temp repo)
+proving a recorded negative outcome lowers a decision entry's relevance in the next compilation
+without surfacing the outcome entry itself as a second item. 191/191 tests passing overall (43
+test files, up from 168/41 — 23 new tests across 2 new test files plus additive assertions in
+3 existing test files), 0 lint/typecheck errors, 0 npm audit vulnerabilities, **no new runtime
+dependency**. New files ≤49 lines (`outcomeFeedback.ts`); largest touched file remains 114 lines
+(`argv.ts`).
+
 ## Explicitly NOT built yet (do not assume these exist)
 
 - Conflict detection is structural only (same subject, differing `trustLevel`) — there is no
@@ -593,8 +639,18 @@ lint/typecheck errors, 0 npm audit vulnerabilities, **no new runtime dependency*
   level is only exposed as the leading string in `verification`, not as structured data, so a
   caller that wants just the level must parse that string (`RiskAssessment`/`assessRisk` are
   exported for any future surface that wants the structured form directly).
+- Phase 16's feedback loop is a **static, deterministic accumulator** (+-1 per signal, capped
+  at +-2 per path), not a learned/trained model — same no-gold-plating rationale as Decisions
+  #8/#11/#13/#21 (see [[04-decisions]] #22): no meaningful volume of outcome data exists yet to
+  train anything on. It keys purely on exact path string equality (no fuzzy/related-file
+  matching — a rename silently drops accumulated history for the old path), only the CLI can
+  record a `--signal` (MCP/VS Code/GitHub still can't record memory at all, per Phase 14's own
+  gap), and it feeds only `evidenceRanker.ts`/`memoryRetriever.ts` — it does **not** feed back
+  into Phase 15's risk scoring, Phase 5's static authority weights, or Phase 7's trust
+  classification, all three of which remain hand-picked constants untouched by any outcome.
 
 ## Next module to build
 
-Phase 16 (Engineering Intelligence) — see [[05-roadmap]] for exit criteria — is the next
-gated phase. Not started.
+None — all 16 phases in the master prompt's recommended sequence (see [[05-roadmap]]) are
+complete. Any further work is an enhancement to an existing phase and requires its own
+explicit authorization (Rule 3) before implementation begins.

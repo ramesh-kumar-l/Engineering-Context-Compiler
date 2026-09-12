@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { dirname, join } from 'node:path'
-import type { MemoryEntry, MemoryEntryType } from './types.js'
+import type { MemoryEntry, MemoryEntryType, MemoryOutcomeSignal } from './types.js'
 
 export const MEMORY_DIR_NAME = '.ecc'
 export const MEMORY_FILE_NAME = 'memory.json'
@@ -36,6 +36,7 @@ export interface RecordMemoryEntryInput {
   detail?: string
   tags?: string[]
   relatedPaths?: string[]
+  signal?: MemoryOutcomeSignal
 }
 
 /**

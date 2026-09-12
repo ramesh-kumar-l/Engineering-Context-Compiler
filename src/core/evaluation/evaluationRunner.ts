@@ -5,6 +5,7 @@ import { retrieveEvidence } from '../evidence/evidenceRetriever.js'
 import { rankEvidence } from '../evidence/evidenceRanker.js'
 import { compileContext } from '../compilation/contextCompiler.js'
 import { estimateItemTokens, DEFAULT_TOKEN_BUDGET } from '../compilation/tokenBudget.js'
+import { loadOutcomeAdjustments } from '../intelligence/outcomeFeedback.js'
 import { retrieveBaselineEvidence } from './baselineRetriever.js'
 import { computeConditionMetrics } from './metrics.js'
 import type { BenchmarkTask, EvaluationResult } from './types.js'
@@ -42,7 +43,8 @@ export async function runEvaluation(
   const repository = await analyzeRepository(rootDir)
   const classification = classifyTask(task.request)
   const eccTask: EngineeringTask = { type: classification.type, request: task.request }
-  const rankedEvidence = rankEvidence(retrieveEvidence(eccTask, repository))
+  const outcomeAdjustments = loadOutcomeAdjustments(rootDir)
+  const rankedEvidence = rankEvidence(retrieveEvidence(eccTask, repository, outcomeAdjustments), outcomeAdjustments)
   const pkg = compileContext(eccTask, { name: basename(rootDir), commit: 'unknown' }, rankedEvidence, {
     tokenBudget,
   })

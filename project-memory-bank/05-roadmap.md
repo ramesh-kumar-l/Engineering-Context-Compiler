@@ -21,11 +21,12 @@ blanket authorization** — each phase requires its own explicit go-ahead (Rule 
 | 13 | GitHub / CI Integrations | ✅ Complete | A PR gets ECC-compiled context (affected components, relevant tests, risk) posted or made available automatically. |
 | 14 | Engineering Memory | ✅ Complete | Architectural decisions/incidents/outcomes persist across sessions and are retrievable as evidence in later compilations. |
 | 15 | Verification Intelligence | ✅ Complete | ECC recommends a verification plan (tests/checks) scaled to task risk (Section 41-42). |
-| 16 | Engineering Intelligence | Not started | Outcomes feed back into ranking/memory quality over time (Section 72's feedback loop closes at least once). |
+| 16 | Engineering Intelligence | ✅ Complete | Outcomes feed back into ranking/memory quality over time (Section 72's feedback loop closes at least once). |
 
 ## Next recommended phase
 
-**Phase 16 — Engineering Intelligence.** Close Section 72's feedback loop at least once:
-outcomes (e.g. a Phase 14 `ecc memory --type outcome` entry recording whether a past
-compilation's verification plan actually caught a problem) feed back into ranking/memory
-quality over time.
+None — all 16 phases in the master prompt's recommended sequence are complete. Any further
+work (e.g. richer outcome signals, a learned re-weighting model once real outcome volume
+exists, exposing memory/outcome recording via MCP/VS Code/GitHub) is an enhancement to an
+existing phase, not a new gated phase, and still requires explicit authorization (Rule 3)
+before implementation begins.

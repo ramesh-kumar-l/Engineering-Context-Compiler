@@ -80,6 +80,33 @@ describe('parseArgs', () => {
         detail: undefined,
         tags: undefined,
         relatedPaths: undefined,
+        signal: undefined,
+        path: '.',
+      },
+    })
+  })
+
+  it('parses a memory command with --signal for an outcome entry', () => {
+    const parsed = parseArgs([
+      'memory',
+      '--type',
+      'outcome',
+      '--summary',
+      'the caching change reduced latency',
+      '--paths',
+      'src/cache.ts',
+      '--signal',
+      'positive',
+    ])
+    expect(parsed).toEqual({
+      command: 'memory',
+      args: {
+        type: 'outcome',
+        summary: 'the caching change reduced latency',
+        detail: undefined,
+        tags: undefined,
+        relatedPaths: ['src/cache.ts'],
+        signal: 'positive',
         path: '.',
       },
     })

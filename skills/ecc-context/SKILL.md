@@ -102,6 +102,12 @@ non-obvious call the next session on this repo would benefit from knowing about 
 X over Y because Z", "incident: this endpoint failed under load because W", "outcome:
 refactor of A reduced B") — not every routine change.
 
+For an `outcome` entry, add `--signal positive|negative` alongside `--paths` when you know
+whether it turned out well or badly for those paths. ECC feeds recorded signals back into
+future compilations against the same repo (Section 72's loop): evidence and memory entries
+tied to paths with a history of negative outcomes rank and score slightly lower next time,
+and positive-outcome paths rank slightly higher — a nudge, not a hard filter.
+
 ## Failure modes to expect
 
 - A repository with no git history still returns code/test evidence; only

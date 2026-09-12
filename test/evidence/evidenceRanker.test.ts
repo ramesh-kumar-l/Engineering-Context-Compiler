@@ -62,6 +62,45 @@ describe('rankEvidence (known-good orderings)', () => {
   });
 });
 
+describe('rankEvidence (outcome feedback, Phase 16)', () => {
+  it('leaves ordering unchanged when no outcome adjustments are passed', () => {
+    const a = item({ source: 'code', path: 'a.ts', relevance: 0.6 });
+    const b = item({ source: 'code', path: 'b.ts', relevance: 0.6 });
+
+    expect(rankEvidence([a, b])).toEqual(rankEvidence([a, b], new Map()));
+  });
+
+  it('lets a positive outcome adjustment promote an item over an equally-relevant peer', () => {
+    const boosted = item({ source: 'code', path: 'a.ts', relevance: 0.6 });
+    const plain = item({ source: 'code', path: 'b.ts', relevance: 0.6 });
+
+    const ranked = rankEvidence([plain, boosted], new Map([['a.ts', 2]]));
+    expect(ranked[0]).toBe(boosted);
+  });
+
+  it('lets a negative outcome adjustment demote an item below an equally-relevant peer', () => {
+    const penalized = item({ source: 'code', path: 'a.ts', relevance: 0.6 });
+    const plain = item({ source: 'code', path: 'b.ts', relevance: 0.6 });
+
+    const ranked = rankEvidence([penalized, plain], new Map([['a.ts', -2]]));
+    expect(ranked[0]).toBe(plain);
+  });
+
+  it('never lets outcome feedback override the source-authority gap', () => {
+    const codeItem = item({ source: 'code', path: 'core.ts', relevance: 0.5 });
+    const gitItem = item({ source: 'git', path: 'core.ts', identifier: 'fix bug', relevance: 0.5 });
+
+    // Even a maximally negative adjustment against the code item shouldn't flip it below git.
+    const ranked = rankEvidence([gitItem, codeItem], new Map([['core.ts', -2]]));
+    expect(ranked[0]).toBe(codeItem);
+  });
+
+  it('does not adjust items with no path', () => {
+    const noPath: EvidenceItem = { source: 'git', relevance: 0.6 };
+    expect(() => rankEvidence([noPath], new Map([['whatever', 2]]))).not.toThrow();
+  });
+});
+
 describe('rankEvidence (fixture repo, integration with retrieveEvidence)', () => {
   it('ranks matching code evidence above the test evidence for the same file', async () => {
     const repository = await analyzeRepository(FIXTURE_ROOT);

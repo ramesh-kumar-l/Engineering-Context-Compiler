@@ -26,6 +26,14 @@ export const SOURCE_AUTHORITY_WEIGHT: Record<EvidenceSourceType, number> = {
 /** Small tie-breaking nudge: an item with resolved symbol matches is more specific evidence. */
 const SPECIFICITY_BONUS = 0.05
 
+/**
+ * Small nudge per unit of accumulated outcome feedback (see
+ * `src/core/intelligence/outcomeFeedback.ts`) - scaled well below the gap between adjacent
+ * source-type authority weights so it can reorder items within the same source type without
+ * ever letting outcome history override the authority signal itself.
+ */
+const OUTCOME_ADJUSTMENT_WEIGHT = 0.05
+
 /** Deterministic fallback order when two items land on the exact same rank score. */
 const SOURCE_TIEBREAK_ORDER: EvidenceSourceType[] = [
   'code',
@@ -42,15 +50,20 @@ const SOURCE_TIEBREAK_ORDER: EvidenceSourceType[] = [
 ]
 
 /**
- * Combines an item's own relevance with its source's authority weight and a small specificity
- * bonus for symbol-level matches. Three independent signals: how well it matched the request
- * (relevance), how directly its source type bears on engineering context (authority), and how
- * precisely it was located (specificity).
+ * Combines an item's own relevance with its source's authority weight, a small specificity
+ * bonus for symbol-level matches, and an optional outcome-feedback nudge (Phase 16: positive/
+ * negative `outcome` memory entries recorded against this item's path). `outcomeAdjustments`
+ * defaults to empty so every existing caller that doesn't pass one gets identical behavior to
+ * before Phase 16.
  */
-export function computeRankScore(item: EvidenceItem): number {
+export function computeRankScore(
+  item: EvidenceItem,
+  outcomeAdjustments: Map<string, number> = new Map(),
+): number {
   const authority = SOURCE_AUTHORITY_WEIGHT[item.source] ?? 0.5
   const specificity = item.symbols && item.symbols.length > 0 ? SPECIFICITY_BONUS : 0
-  return item.relevance * authority + specificity
+  const outcome = item.path ? (outcomeAdjustments.get(item.path) ?? 0) * OUTCOME_ADJUSTMENT_WEIGHT : 0
+  return item.relevance * authority + specificity + outcome
 }
 
 function tiebreakKey(item: EvidenceItem): string {
@@ -59,14 +72,20 @@ function tiebreakKey(item: EvidenceItem): string {
 
 /**
  * Ranks candidate evidence (Phase 4's `retrieveEvidence` output) using more than one signal:
- * relevance, source-type authority, and symbol-match specificity. Ties break deterministically
- * by source-type priority, then by path/identifier, so ordering is stable and unit-testable.
- * Does not mutate or drop items - purely an ordering step, kept separate from retrieval and
- * from the token-budget selection that Phase 6 (Context Compilation) will build on top.
+ * relevance, source-type authority, symbol-match specificity, and (Phase 16) accumulated
+ * outcome feedback for the item's path. Ties break deterministically by source-type priority,
+ * then by path/identifier, so ordering is stable and unit-testable. Does not mutate or drop
+ * items - purely an ordering step, kept separate from retrieval and from the token-budget
+ * selection Phase 6 (Context Compilation) builds on top. `outcomeAdjustments` is produced by
+ * `src/core/intelligence/outcomeFeedback.ts`; this module has no dependency on memory itself,
+ * it only consumes the resulting `Map<string, number>`.
  */
-export function rankEvidence(items: EvidenceItem[]): EvidenceItem[] {
+export function rankEvidence(
+  items: EvidenceItem[],
+  outcomeAdjustments: Map<string, number> = new Map(),
+): EvidenceItem[] {
   return [...items].sort((a, b) => {
-    const scoreDiff = computeRankScore(b) - computeRankScore(a)
+    const scoreDiff = computeRankScore(b, outcomeAdjustments) - computeRankScore(a, outcomeAdjustments)
     if (scoreDiff !== 0) return scoreDiff
 
     const orderDiff = SOURCE_TIEBREAK_ORDER.indexOf(a.source) - SOURCE_TIEBREAK_ORDER.indexOf(b.source)

@@ -1,13 +1,13 @@
 # 02 — Architecture (Target — NOT YET IMPLEMENTED)
 
-Status: **design target**, partially implemented — see [[implementation-status]] for what
-actually exists (Phase 1: core types/schema; Phase 2: repository analysis; Phase 3: task
-classification; Phase 4: evidence retrieval; Phase 5: evidence ranking; Phase 6: context
+Status: **design target**, fully implemented through Phase 16 — see [[implementation-status]]
+for what actually exists (Phase 1: core types/schema; Phase 2: repository analysis; Phase 3:
+task classification; Phase 4: evidence retrieval; Phase 5: evidence ranking; Phase 6: context
 compilation; Phase 7: trust + provenance; Phase 8: CLI; Phase 9: skill integration; Phase 10:
 MCP; Phase 11: evaluation + benchmarking; Phase 12: VS Code extension; Phase 13: GitHub/CI
-integration; Phase 14: engineering memory; Phase 15: verification intelligence).
-Recorded here so future phases don't re-derive the target shape and implementation stays
-aligned with the governing spec.
+integration; Phase 14: engineering memory; Phase 15: verification intelligence; Phase 16:
+engineering intelligence). Recorded here so future phases don't re-derive the target shape and
+implementation stays aligned with the governing spec.
 
 ## Target shape
 
@@ -40,7 +40,7 @@ Core must stay independent of any specific UI or agent integration.
 `TaskClassifier ✅, TaskNormalizer, RepositoryAnalyzer ✅, FileClassifier ✅, SymbolResolver ✅,
 DependencyAnalyzer ✅, EvidenceRetriever ✅, GitHistoryAnalyzer ✅, ContextRanker ✅, ContextSelector ✅,
 ContextCompressor ✅, TokenBudgetManager ✅, ProvenanceEngine ✅, TrustEngine ✅, VerificationPlanner ✅,
-ContextPackageBuilder ✅, EvaluationEngine ✅, MemoryEngine ✅, AgentAdapter`
+ContextPackageBuilder ✅, EvaluationEngine ✅, MemoryEngine ✅, IntelligenceEngine ✅, AgentAdapter`
 
 ✅ = implemented: repository analysis (Phase 2, `src/core/repository/`), task classification
 (Phase 3, `src/core/task/`), evidence retrieval incl. git history (Phase 4,
@@ -56,8 +56,10 @@ orchestrator (`contextCompiler.ts`, the `ContextPackageBuilder`); trust + proven
 `MemoryEngine`) and a keyword-overlap retriever (`memoryRetriever.ts`) that turns persisted
 decisions/incidents/outcomes into ordinary `EvidenceItem`s; verification intelligence (Phase
 15, `src/core/verification/`) — a deterministic risk scorer (`riskAssessor.ts`, the
-`VerificationPlanner`'s risk half) and a risk-scaled step planner (`verificationPlanner.ts`).
-All others: not started.
+`VerificationPlanner`'s risk half) and a risk-scaled step planner (`verificationPlanner.ts`);
+engineering intelligence (Phase 16, `src/core/intelligence/`) — a deterministic outcome-feedback
+reducer (`outcomeFeedback.ts`, the `IntelligenceEngine`) that closes Section 72's loop by turning
+recorded outcomes into ranking/memory-relevance adjustments. All others: not started.
 
 The **CLI** (Phase 8, `src/cli/`) is not itself a candidate component — it's the first thin
 surface over the core: `ecc context "<task>"` (`src/cli/cli.ts` → `runContext.ts`) calls the
@@ -154,6 +156,21 @@ a field that existed since Phase 1's schema but was always `[]` until this phase
 change was needed, so every existing surface (CLI/MCP/VS Code/GitHub) gets a real risk-scaled
 verification plan for free; Phase 13's markdown report already renders `pkg.verification`
 under "Suggested verification". See [[04-decisions]] #21.
+
+**Engineering intelligence** (Phase 16, `src/core/intelligence/`) is the smallest new core
+component yet - one pure function, `computeOutcomeAdjustments()`, that reduces Phase 14's
+persisted memory entries to a `Map<path, number>`: every `type: 'outcome'` entry that carries
+the new `signal: 'positive'|'negative'` field contributes +-1 to each of its `relatedPaths`,
+summed and capped at +-2 per path so no single path's history can dominate. `evidenceRanker.ts`
+(Phase 5) and `memory/memoryRetriever.ts` (Phase 14) each gained one new optional,
+default-empty `outcomeAdjustments` parameter - neither module imports from `core/intelligence`,
+they only consume the resulting map, so the dependency runs one way (intelligence depends on
+memory, not the reverse) matching the roadmap's own evolution order below. `runContext.ts` and
+`evaluationRunner.ts` load the map once per run (`loadOutcomeAdjustments(repoRoot)`) and thread
+it through both `retrieveEvidence` and `rankEvidence`, so every surface gets the feedback loop
+for free. This directly closes Section 72: a negative outcome recorded against a path measurably
+lowers that path's future rank score and any memory entry's relevance tied to the same path;
+a positive outcome raises them. See [[04-decisions]] #22.
 
 ## EngineeringContextPackage (draft schema)
 

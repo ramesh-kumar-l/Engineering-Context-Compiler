@@ -12,6 +12,8 @@ export interface MemoryCommandArgs {
   detail?: string
   tags?: string[]
   relatedPaths?: string[]
+  /** Not yet validated against MemoryOutcomeSignal here - meaningful for `--type outcome`. */
+  signal?: string
   path: string
 }
 
@@ -37,6 +39,7 @@ function parseMemoryArgs(rest: string[]): ParsedArgs {
   let detail: string | undefined
   let tags: string[] | undefined
   let relatedPaths: string[] | undefined
+  let signal: string | undefined
   let path = DEFAULT_PATH
 
   for (let i = 0; i < rest.length; i += 1) {
@@ -56,13 +59,16 @@ function parseMemoryArgs(rest: string[]): ParsedArgs {
     } else if (token === '--paths') {
       i += 1
       relatedPaths = splitList(rest[i])
+    } else if (token === '--signal') {
+      i += 1
+      signal = rest[i]
     } else if (token === '--path') {
       i += 1
       path = rest[i] ?? path
     }
   }
 
-  return { command: 'memory', args: { type, summary, detail, tags, relatedPaths, path } }
+  return { command: 'memory', args: { type, summary, detail, tags, relatedPaths, signal, path } }
 }
 
 /**
