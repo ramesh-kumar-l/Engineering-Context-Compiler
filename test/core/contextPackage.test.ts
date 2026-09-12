@@ -30,10 +30,14 @@ describe('validateContextPackage', () => {
             path: 'src/payment/PaymentService.java',
             symbols: ['processPayment'],
             relevance: 0.98,
+            trustLevel: 'fact',
           },
         ],
-        supporting: [{ source: 'git', identifier: 'abc123', relevance: 0.87 }],
+        supporting: [
+          { source: 'git', identifier: 'abc123', relevance: 0.87, trustLevel: 'fact' },
+        ],
       },
+      conflicts: [],
       history: [
         {
           claim: 'Retry logic changed',
@@ -61,7 +65,7 @@ describe('validateContextPackage', () => {
       { type: 'explain', request: 'Explain auth flow' },
       { name: 'example', commit: 'abc123' },
     )
-    pkg.context.primary.push({ source: 'code', relevance: 1.5 })
+    pkg.context.primary.push({ source: 'code', relevance: 1.5, trustLevel: 'fact' })
 
     const result = validateContextPackage(pkg)
     expect(result.ok).toBe(false)

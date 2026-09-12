@@ -54,6 +54,37 @@ describe('compileContext (known-good cases)', () => {
     expect(pkg.context.primary).toEqual([]);
     expect(pkg.context.supporting).toEqual([]);
     expect(pkg.excluded).toEqual([]);
+    expect(pkg.conflicts).toEqual([]);
+  });
+
+  it('attaches an explicit trust level and guaranteed provenance to every included item', () => {
+    const ranked = rankEvidence([
+      item({ source: 'code', path: 'a.ts', relevance: 0.9 }),
+      item({ source: 'memory', identifier: 'past-note', relevance: 0.3 }),
+    ]);
+
+    const pkg = compileContext(task, repository, ranked, { tokenBudget: 10_000 });
+
+    const allItems = [...pkg.context.primary, ...pkg.context.supporting];
+    expect(allItems.length).toBeGreaterThan(0);
+    for (const evidenceItem of allItems) {
+      expect(evidenceItem.provenance).toBeDefined();
+      expect(['fact', 'derived', 'inference', 'unknown']).toContain(evidenceItem.trustLevel);
+    }
+  });
+
+  it('surfaces a conflict when two items share a subject but disagree on trust level', () => {
+    const ranked = rankEvidence([
+      item({ source: 'code', path: 'a.ts', relevance: 0.9 }),
+      item({ source: 'memory', path: 'a.ts', relevance: 0.2 }),
+    ]);
+
+    const pkg = compileContext(task, repository, ranked, { tokenBudget: 10_000 });
+
+    const result = validateContextPackage(pkg);
+    expect(result.ok).toBe(true);
+    expect(pkg.conflicts.length).toBeGreaterThan(0);
+    expect(pkg.conflicts.some((c) => c.subject === 'a.ts')).toBe(true);
   });
 });
 

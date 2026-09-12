@@ -16,6 +16,7 @@ export function createEmptyContextPackage(
     task,
     repository,
     context: { primary: [], supporting: [] },
+    conflicts: [],
     history: [],
     constraints: [],
     unknowns: [],

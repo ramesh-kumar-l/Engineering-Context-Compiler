@@ -3,8 +3,8 @@
 Status: **design target**, partially implemented — see [[implementation-status]] for what
 actually exists (Phase 1: core types/schema; Phase 2: repository analysis; Phase 3: task
 classification; Phase 4: evidence retrieval; Phase 5: evidence ranking; Phase 6: context
-compilation). Recorded here so future phases don't re-derive the target shape and
-implementation stays aligned with the governing spec.
+compilation; Phase 7: trust + provenance). Recorded here so future phases don't re-derive
+the target shape and implementation stays aligned with the governing spec.
 
 ## Target shape
 
@@ -36,7 +36,7 @@ Core must stay independent of any specific UI or agent integration.
 
 `TaskClassifier ✅, TaskNormalizer, RepositoryAnalyzer ✅, FileClassifier ✅, SymbolResolver ✅,
 DependencyAnalyzer ✅, EvidenceRetriever ✅, GitHistoryAnalyzer ✅, ContextRanker ✅, ContextSelector ✅,
-ContextCompressor ✅, TokenBudgetManager ✅, ProvenanceEngine, TrustEngine, VerificationPlanner,
+ContextCompressor ✅, TokenBudgetManager ✅, ProvenanceEngine ✅, TrustEngine ✅, VerificationPlanner,
 ContextPackageBuilder ✅, EvaluationEngine, MemoryEngine, AgentAdapter`
 
 ✅ = implemented: repository analysis (Phase 2, `src/core/repository/`), task classification
@@ -45,7 +45,11 @@ ContextPackageBuilder ✅, EvaluationEngine, MemoryEngine, AgentAdapter`
 context compilation (Phase 6, `src/core/compilation/`) — token budgeting
 (`tokenBudget.ts`), symbol-list compression (`contextCompressor.ts`), primary/supporting
 selection with exclusion tracking (`contextSelector.ts`), and the `compileContext()`
-orchestrator (`contextCompiler.ts`, the `ContextPackageBuilder`). All others: not started.
+orchestrator (`contextCompiler.ts`, the `ContextPackageBuilder`); trust + provenance (Phase 7,
+`src/core/trust/`) — guaranteed provenance reconstruction (`provenanceGuard.ts`, the
+`ProvenanceEngine`), per-source-type trust classification (`trustClassifier.ts`, the
+`TrustEngine`), and structural conflict surfacing (`conflictDetector.ts`). All others: not
+started.
 
 ## EngineeringContextPackage (draft schema)
 
@@ -54,8 +58,9 @@ version: "0.1"
 task: {type, request}
 repository: {name, commit}
 context:
-  primary:   [{source, path, symbols, relevance}]
-  supporting: [{source, id, relevance}]
+  primary:   [{source, path, symbols, relevance, trustLevel}]
+  supporting: [{source, id, relevance, trustLevel}]
+conflicts: [{subject, items}]
 history: [{claim, source: {type, id}}]
 constraints: [{statement, provenance: {source}}]
 unknowns: [string]

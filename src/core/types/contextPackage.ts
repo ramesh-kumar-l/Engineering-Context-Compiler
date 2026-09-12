@@ -5,8 +5,8 @@
  */
 
 import type { EngineeringTask } from './task.js'
-import type { EvidenceItem, EvidenceProvenance } from './evidence.js'
-import type { TrustLevel } from './trust.js'
+import type { EvidenceProvenance } from './evidence.js'
+import type { EvidenceConflict, TrustedEvidenceItem, TrustLevel } from './trust.js'
 
 export const CONTEXT_PACKAGE_VERSION = '0.1'
 
@@ -37,8 +37,8 @@ export interface ExclusionSummary {
 }
 
 export interface ContextEvidence {
-  primary: EvidenceItem[]
-  supporting: EvidenceItem[]
+  primary: TrustedEvidenceItem[]
+  supporting: TrustedEvidenceItem[]
 }
 
 export interface EngineeringContextPackage {
@@ -46,6 +46,7 @@ export interface EngineeringContextPackage {
   task: EngineeringTask
   repository: RepositoryRef
   context: ContextEvidence
+  conflicts: EvidenceConflict[]
   history: HistoricalClaim[]
   constraints: Constraint[]
   unknowns: string[]

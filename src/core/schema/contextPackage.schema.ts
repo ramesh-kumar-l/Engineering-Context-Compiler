@@ -28,6 +28,12 @@ const evidenceItemSchema = z.object({
   relevance: z.number().min(0).max(1),
   confidence: z.number().min(0).max(1).optional(),
   provenance: evidenceProvenanceSchema.optional(),
+  trustLevel: z.enum(TRUST_LEVELS),
+})
+
+const evidenceConflictSchema = z.object({
+  subject: z.string(),
+  items: z.array(evidenceItemSchema),
 })
 
 const historicalClaimSchema = z.object({
@@ -63,6 +69,7 @@ export const engineeringContextPackageSchema = z.object({
     primary: z.array(evidenceItemSchema),
     supporting: z.array(evidenceItemSchema),
   }),
+  conflicts: z.array(evidenceConflictSchema),
   history: z.array(historicalClaimSchema),
   constraints: z.array(constraintSchema),
   unknowns: z.array(z.string()),

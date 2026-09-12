@@ -4,7 +4,7 @@ name: implementation-status
 
 # Implementation Status
 
-_Last updated: 2026-09-12 (Phase 6)_
+_Last updated: 2026-09-12 (Phase 7)_
 
 Update this file at the end of every major feature — it is the compressed "what actually
 exists" record so future tasks don't have to re-derive it by reading source.
@@ -40,6 +40,7 @@ src/
     task/                 # Phase 3: task classification (see table below)
     evidence/             # Phase 4-5: evidence retrieval + ranking (see table below)
     compilation/          # Phase 6: context compilation (see table below)
+    trust/                # Phase 7: provenance guarantee + trust classification + conflicts
     index.ts              # barrel
   index.ts                # package public entry
 test/
@@ -48,6 +49,7 @@ test/
   task/                     # unit tests + labeled-set accuracy test
   evidence/                 # unit + fixture-repo integration tests per retriever/ranker
   compilation/              # unit + fixture-repo integration tests for Phase 6 modules
+  trust/                    # unit tests for Phase 7 modules
   fixtures/sample-repo/    # static fixture dir analyzed end-to-end by repositoryAnalyzer.test.ts
   fixtures/task-requests.json  # 54 labeled {request, expected TaskType} examples
 ```
@@ -180,12 +182,51 @@ asserting the result validates against Phase 1's `validateContextPackage()` sche
 tests passing overall (17 test files, up from 53/13), 0 lint/typecheck errors, 0 npm audit
 vulnerabilities, no new runtime dependency. New files ≤63 lines.
 
+## Implemented (Phase 7 — Trust + Provenance)
+
+| Module | Path | What it does |
+|---|---|---|
+| Types | `src/core/types/trust.ts` | `TrustedEvidenceItem` (`EvidenceItem` + required `trustLevel`), `EvidenceConflict { subject, items }` |
+| Provenance guard | `src/core/trust/provenanceGuard.ts` | `ensureProvenance(item)` — returns the item's existing `provenance` if present, otherwise reconstructs one from the item's own `source`/`path`/`identifier` (never invents a new fact) |
+| Trust classifier | `src/core/trust/trustClassifier.ts` | `classifyTrust(item)` — static per-`EvidenceSourceType` rule table -> exactly one of `fact`/`derived`/`inference`/`unknown`; `attachTrust(item)` composes `ensureProvenance` + `classifyTrust` into a `TrustedEvidenceItem`, never mutates |
+| Conflict detector | `src/core/trust/conflictDetector.ts` | `detectConflicts(items)` — groups by subject (`path` or `identifier`); any subject with more than one distinct `trustLevel` across its items becomes an `EvidenceConflict`, reported rather than resolved |
+
+`compileContext()` (Phase 6's orchestrator) now runs every selected item through `attachTrust`
+before assigning it to `context.primary`/`context.supporting`, and calls `detectConflicts()`
+over the combined result into a new `EngineeringContextPackage.conflicts` field (schema +
+type updated; `createEmptyContextPackage()` defaults it to `[]`). This makes all three exit
+criteria structural, not incidental:
+- **Every item has provenance**: `TrustedEvidenceItem`/the schema's `evidenceItemSchema` both
+  require `trustLevel`, and `attachTrust` guarantees `provenance` is populated before an item
+  can become one — a `EngineeringContextPackage` that skipped this can't pass
+  `validateContextPackage()`.
+- **FACT/DERIVED/INFERENCE/UNKNOWN never blurred**: `classifyTrust` is a single deterministic
+  function and the *only* place a `TrustLevel` is assigned — never inferred from `relevance`/
+  `confidence`, which measure fit and certainty, not evidentiary kind.
+- **Conflicts surfaced, not silently resolved**: `detectConflicts` runs unconditionally over
+  every compiled package; conflicting items stay in `context.primary`/`supporting` as before
+  (nothing is dropped or auto-merged) and are additionally listed in `conflicts`.
+
+Trust rules (see [[04-decisions]] #13): `code`/`test` with a `path` -> `fact`; `git`/`ci`/
+`incident`/`runtime` with a `commit` or `identifier` -> `fact`, else `derived`; `pr`/`issue`/
+`documentation`/`constraint` -> `derived`; `memory` -> `inference`; anything with no
+verifiable `path`/`identifier`/`commit` at all -> `unknown`.
+
+Tested with known-good classifications per source type, provenance reconstruction (present
+vs. missing, never inventing new facts, no mutation), conflict grouping (by path, by
+identifier, same-trust-level not flagged, single-item subjects not flagged, no-subject items
+ignored), and two `compileContext` integration tests (every included item carries provenance
++ a valid trust level; two items sharing a path but differing trust level produce a surfaced
+conflict). 91/91 tests passing overall (20 test files, up from 72/17), 0 lint/typecheck
+errors, 0 npm audit vulnerabilities, no new runtime dependency. New/changed files ≤78 lines
+(schema file, due to the added conflict schema).
+
 ## Explicitly NOT built yet (do not assume these exist)
 
-- No provenance/trust enforcement yet (Phase 7) — `compileContext()` passes each
-  `EvidenceItem` through with whatever `provenance`/`confidence` it already had from
-  retrieval; nothing yet guarantees every included item carries provenance or flags
-  conflicting evidence.
+- Conflict detection is structural only (same subject, differing `trustLevel`) — there is no
+  semantic/content diff between two claims about the same file, since no such capability
+  exists yet. A `path`+`identifier` collision with the *same* `trustLevel` is not flagged even
+  if the underlying claims disagree in content.
 - No CLI entry point / `bin` (Phase 8) — deliberately deferred; no invocable surface yet.
 - No skill or MCP server (Phases 9-10).
 - No build/bundle step (`tsc` is `noEmit`-only for now) — will be added when the CLI
@@ -202,5 +243,4 @@ vulnerabilities, no new runtime dependency. New files ≤63 lines.
 
 ## Next module to build
 
-Phase 7 (Trust + Provenance) — see [[05-roadmap]] for exit criteria — is the next gated
-phase. Not started.
+Phase 8 (CLI) — see [[05-roadmap]] for exit criteria — is the next gated phase. Not started.
