@@ -1,0 +1,28 @@
+{
+  "name": "ecc",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Engineering Context Compiler - the context and evidence layer for AI-native software engineering",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@typescript-eslint/eslint-plugin": "^8.19.1",
+    "@typescript-eslint/parser": "^8.19.1",
+    "eslint": "^9.18.0",
+    "typescript": "^5.7.3",
+    "vitest": "^5.0.0"
+  }
+}

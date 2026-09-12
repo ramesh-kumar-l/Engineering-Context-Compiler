@@ -3,29 +3,28 @@
 Recommended phase sequence from the master prompt (Section 13). **This is a sequence, not
 blanket authorization** — each phase requires its own explicit go-ahead (Rule 3/5).
 
-| Phase | Name | Status |
-|-------|------|--------|
-| 0 | Repository + Product Assessment | ✅ Complete (this session) |
-| 1 | ECC Foundation | Not started |
-| 2 | Repository Intelligence | Not started |
-| 3 | Task Understanding | Not started |
-| 4 | Evidence Retrieval | Not started |
-| 5 | Evidence Ranking | Not started |
-| 6 | Context Compilation | Not started |
-| 7 | Trust + Provenance | Not started |
-| 8 | CLI | Not started |
-| 9 | Skill Integration | Not started |
-| 10 | MCP | Not started |
-| 11 | Evaluation + Benchmarking | Not started |
-| 12 | VS Code Extension | Not started |
-| 13 | GitHub / CI Integrations | Not started |
-| 14 | Engineering Memory | Not started |
-| 15 | Verification Intelligence | Not started |
-| 16 | Engineering Intelligence | Not started |
+| Phase | Name | Status | Exit criteria |
+|-------|------|--------|----------------|
+| 0 | Repository + Product Assessment | ✅ Complete | Repo/memory bank inventoried; assessment report delivered; no product code touched. |
+| 1 | ECC Foundation | ✅ Complete | Project scaffolding (build/lint/test/CI) in place; core types (`Task`, `Evidence`, `Trust`, `EngineeringContextPackage`) defined and zod-validated; tests/typecheck/lint/audit all green. |
+| 2 | Repository Intelligence | Not started | Can analyze a real repo: classify files, resolve symbols for at least one language, build a basic dependency graph — with tests against a real (or fixture) repo. |
+| 3 | Task Understanding | Not started | Given a free-text request, classify it into a `TaskType` (Section 25) with reasonable accuracy on a small labeled test set. |
+| 4 | Evidence Retrieval | Not started | Given a classified task + analyzed repo, retrieve a candidate evidence set (code/git/tests) relevant to the task. |
+| 5 | Evidence Ranking | Not started | Candidate evidence is scored/ranked using >1 signal (Section 22); ranking is unit-tested against known-good orderings. |
+| 6 | Context Compilation | Not started | Ranked evidence is selected + compressed into a valid `EngineeringContextPackage` within a token budget, with `excluded` reasons populated. |
+| 7 | Trust + Provenance | Not started | Every included item carries provenance; FACT/DERIVED/INFERENCE/UNKNOWN is never blurred; conflicting evidence is surfaced, not silently resolved. |
+| 8 | CLI | Not started | `ecc context "<task>"` runs end-to-end against a real repo and prints/saves a valid context package; documented usage. |
+| 9 | Skill Integration | Not started | A Claude skill exists that teaches an agent when/how to invoke ECC, without duplicating existing engineering-methodology skills. |
+| 10 | MCP | Not started | `compile_engineering_context` exposed as an MCP tool; a real MCP client can call it and get a valid package back. |
+| 11 | Evaluation + Benchmarking | Not started | At least one "agent alone vs. agent+ECC" comparison run, with the metrics in [[07-evaluation]] measured, not just defined. |
+| 12 | VS Code Extension | Not started | Right-click "Compile Engineering Context" produces a preview the user can send to an agent; extension is a thin client over CLI/core. |
+| 13 | GitHub / CI Integrations | Not started | A PR gets ECC-compiled context (affected components, relevant tests, risk) posted or made available automatically. |
+| 14 | Engineering Memory | Not started | Architectural decisions/incidents/outcomes persist across sessions and are retrievable as evidence in later compilations. |
+| 15 | Verification Intelligence | Not started | ECC recommends a verification plan (tests/checks) scaled to task risk (Section 41-42). |
+| 16 | Engineering Intelligence | Not started | Outcomes feed back into ranking/memory quality over time (Section 72's feedback loop closes at least once). |
 
 ## Next recommended phase
 
-**Phase 1 — ECC Foundation.** Since the repo is greenfield (no code to build on), Phase 1
-will need to also cover baseline project scaffolding (language/runtime choice, package
-layout, test harness) that a less-empty repo might already have had. This should be
-proposed as a Phase 1 plan and explicitly authorized before any code is written.
+**Phase 2 — Repository Intelligence.** Requires deciding what to analyze against first —
+see the open question in [[active-context]] about picking a target repo/language before
+planning goes deep.

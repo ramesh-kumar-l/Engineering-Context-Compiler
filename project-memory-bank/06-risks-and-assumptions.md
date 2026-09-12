@@ -24,8 +24,10 @@
   (Section 78). Differentiation must move toward evidence/history/constraints/verification/
   memory, not generic retrieval — relevant once Phase 4+ begins.
 
-## Open questions for the user (raise before/at Phase 1 planning)
+## Open questions for the user (raise before/at Phase 2 planning)
 
-- What language/runtime should ECC itself be built in?
+- ~~What language/runtime should ECC itself be built in?~~ Resolved: TypeScript/Node
+  (see [[04-decisions]] #5).
 - Is there a specific target repository or task type to design the first vertical slice
-  against, or should Phase 1 remain deliberately abstract?
+  (Phase 2 Repository Intelligence) against, or should it stay language-agnostic /
+  fixture-based initially?

@@ -24,4 +24,4 @@ adversarial tasks, large repos, legacy systems, monorepos, real-world tasks — 
 
 ## Current baseline
 
-None. Nothing to compare yet — see [[03-current-state]].
+None. Nothing to compare yet — see [[implementation-status]].

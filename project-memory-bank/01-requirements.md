@@ -19,8 +19,8 @@ non-negotiable rules for fast lookup; the full prompt is authoritative if this d
 
 ## Reading hierarchy for a new task
 
-`active/phase.md` → `active/task.md` → `03-current-state.md` → relevant architecture/domain
-file → source code only if still necessary.
+`active-context.md` → `implementation-status.md` → relevant architecture/domain file →
+source code only if still necessary.
 
 ## Memory bank hygiene
 

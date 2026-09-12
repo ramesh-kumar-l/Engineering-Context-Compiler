@@ -1,7 +1,7 @@
 # 02 — Architecture (Target — NOT YET IMPLEMENTED)
 
 Status: **design target only**. Nothing in this file exists in code yet (repo is
-greenfield as of Phase 0 — see [[03-current-state]]). Recorded here so future phases don't
+greenfield as of Phase 0 — see [[implementation-status]]). Recorded here so future phases don't
 re-derive it and so implementation stays aligned with the governing spec.
 
 ## Target shape
