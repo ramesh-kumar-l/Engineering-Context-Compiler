@@ -4,7 +4,7 @@ The context and evidence layer for AI-native software engineering: converts a me
 engineering task into the smallest, highest-value, evidence-backed context package an AI
 coding agent needs to solve it.
 
-**Status**: Phase 14 of 16 (Engineering Memory). See
+**Status**: Phase 15 of 16 (Verification Intelligence). See
 [`project-memory-bank/implementation-status.md`](project-memory-bank/implementation-status.md)
 for what's built and [`project-memory-bank/05-roadmap.md`](project-memory-bank/05-roadmap.md)
 for the phase plan.
@@ -48,6 +48,12 @@ node dist/cli/index.js memory --type decision --summary "Chose fetch over an SDK
 `<repo>/.ecc/memory.json` and are retrieved as ordinary evidence
 (`source: 'memory'`, `trustLevel: 'inference'`) by any surface (CLI/MCP/VS Code/GitHub) that
 later runs `context` against that repository.
+
+Every `context` call's `verification` field is a risk-scaled plan: a leading `Risk: <level>
+(<reasons>)` line, then concrete steps (run existing tests, flag missing test coverage,
+manually verify at medium+ risk, request peer review and resolve conflicts at high risk). See
+[`project-memory-bank/02-architecture.md`](project-memory-bank/02-architecture.md) for how
+risk is scored.
 
 ## MCP usage
 

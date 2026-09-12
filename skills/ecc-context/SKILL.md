@@ -76,8 +76,10 @@ The output is a single JSON `EngineeringContextPackage`:
   silently pick one side; surface the conflict to the user or investigate further.
 - `unknowns` / `excluded` — gaps ECC couldn't fill or had to cut for budget. Treat these as
   known blind spots, not as "nothing else exists."
-- `verification` — ECC's suggested checks, if any; this is a hint, not a replacement for
-  your own verification step.
+- `verification` — a risk-scaled plan: a leading `Risk: <level> (<reasons>)` line, then
+  concrete steps (run existing tests, add missing test coverage, manually verify, peer review
+  at high risk). Treat it as a floor, not a ceiling — it reasons only over the evidence ECC
+  compiled, not the actual diff you produce.
 
 Every item under `context.primary`/`context.supporting` carries a `trustLevel`:
 `fact` (directly observed, e.g. a real file/commit), `derived` (computed from facts),

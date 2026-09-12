@@ -5,6 +5,7 @@ import { createEmptyContextPackage } from '../contextPackage.js'
 import { selectEvidence } from './contextSelector.js'
 import { DEFAULT_TOKEN_BUDGET } from './tokenBudget.js'
 import { attachTrust, detectConflicts } from '../trust/index.js'
+import { planVerification } from '../verification/index.js'
 
 export interface CompileContextOptions {
   tokenBudget?: number
@@ -36,6 +37,7 @@ export function compileContext(
   pkg.context.supporting = trustedSupporting
   pkg.excluded = excluded
   pkg.conflicts = detectConflicts([...trustedPrimary, ...trustedSupporting])
+  pkg.verification = planVerification(task, trustedPrimary, trustedSupporting, pkg.conflicts)
 
   return pkg
 }

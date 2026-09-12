@@ -29,6 +29,8 @@ describe('compileContext (known-good cases)', () => {
     expect(result.ok).toBe(true);
     expect(pkg.context.primary).toHaveLength(2);
     expect(pkg.excluded).toEqual([]);
+    expect(pkg.verification.length).toBeGreaterThan(0);
+    expect(pkg.verification[0]).toMatch(/^Risk: /);
   });
 
   it('populates excluded reasons when the budget is tight, and still produces a valid package', () => {
@@ -100,5 +102,6 @@ describe('compileContext (fixture repo, end-to-end retrieve -> rank -> compile)'
     const result = validateContextPackage(pkg);
     expect(result.ok).toBe(true);
     expect(pkg.context.primary.length + pkg.context.supporting.length).toBeGreaterThan(0);
+    expect(pkg.verification.length).toBeGreaterThan(0);
   });
 });

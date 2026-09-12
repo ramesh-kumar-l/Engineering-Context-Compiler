@@ -4,7 +4,7 @@ name: implementation-status
 
 # Implementation Status
 
-_Last updated: 2026-09-12 (Phase 14)_
+_Last updated: 2026-09-12 (Phase 15)_
 
 Update this file at the end of every major feature — it is the compressed "what actually
 exists" record so future tasks don't have to re-derive it by reading source.
@@ -59,6 +59,7 @@ src/
     trust/                # Phase 7: provenance guarantee + trust classification + conflicts
     evaluation/            # Phase 11: agent-alone-vs-agent+ECC metrics engine (see table below)
     memory/                 # Phase 14: engineering memory store + retriever (see table below)
+    verification/           # Phase 15: risk assessment + verification planning (see table below)
     index.ts              # barrel
   cli/                   # Phase 8: ecc CLI (see table below)
   mcp/                   # Phase 10: MCP server (see table below)
@@ -85,6 +86,7 @@ test/
   reporting/                # Phase 13: unit tests for src/reporting/markdownReport.ts
   github/                   # Phase 13: unit + fixture-repo integration tests for src/github/
   memory/                   # Phase 14: unit + isolated-temp-repo integration tests for src/core/memory/
+  verification/             # Phase 15: unit tests for src/core/verification/
   fixtures/sample-repo/    # static fixture dir analyzed end-to-end by repositoryAnalyzer.test.ts
   fixtures/task-requests.json  # 54 labeled {request, expected TaskType} examples
   fixtures/pull-request-event.json  # sample GitHub Actions pull_request event payload
@@ -491,6 +493,40 @@ extended `argv.test.ts`/`cli.test.ts` with `memory`-command parsing and end-to-e
 typecheck errors, 0 npm audit vulnerabilities, **no new runtime dependency**. New files ≤62
 lines (`memoryStore.ts`); largest touched file remains 108 lines (`argv.ts`).
 
+## Implemented (Phase 15 — Verification Intelligence)
+
+| Module | Path | What it does |
+|---|---|---|
+| Types | `src/core/verification/types.ts` | `RISK_LEVELS` (`low`/`medium`/`high`), `RiskAssessment { level, score, factors }` |
+| Risk assessor | `src/core/verification/riskAssessor.ts` | `assessRisk(task, primary, supporting, conflicts)` — deterministic score from task-type weight, missing test coverage for touched code, low-trust primary evidence, surfaced conflicts, and blast radius (primary evidence count); maps the score to a level and lists the human-readable factors that contributed |
+| Planner | `src/core/verification/verificationPlanner.ts` | `planVerification(task, primary, supporting, conflicts)` — calls `assessRisk`, then returns a step list always led by `Risk: <level> (<factors>)`, adding "run existing tests" / "add missing test coverage" always, "manually verify" at medium+, and "request peer review" / "resolve conflicts" at high |
+
+`compileContext()` (`contextCompiler.ts`) now calls `planVerification()` once, after computing
+`conflicts`, and assigns the result to `EngineeringContextPackage.verification` — a field that
+existed since Phase 1's schema/type but was always `[]` until this phase. No schema/type
+change was needed. This is the only change to existing code; `src/core/verification/` is a
+self-contained new module.
+
+Satisfies Phase 15's exit criteria directly: any `ecc context` (or MCP/VS Code/GitHub) call now
+returns a non-empty, risk-scaled `verification` list instead of an empty array. Verified
+end-to-end against the **built** `dist/cli/index.js`: a `refactor` task against the fixture
+repo produced `["Risk: medium (task type 'refactor' inherently carries elevated risk)", "Run
+the existing tests: test/index.test.ts", "Manually verify the primary evidence above reflects
+the intended change"]`, while an `explain` task on the same repo produced a shorter, low-risk
+plan — and Phase 13's `renderMarkdownReport` (which already had a "Suggested verification"
+section, previously always empty) now renders it directly. See [[04-decisions]] #21.
+
+Tested with: unit tests for `assessRisk` (low-risk baseline, task-type weighting, missing-test
+factor, low-trust factor, conflict factor, multi-factor high-risk case) and `planVerification`
+(risk line always first, test-suite step when tests exist, add-coverage step when they don't,
+no test-related step when there's no code evidence at all, peer-review + conflict-resolution
+steps only at high risk, no peer-review step at low risk); two new assertions added to the
+existing `contextCompiler.test.ts` confirming `pkg.verification` is populated end-to-end
+(known-good case and real fixture-repo pipeline). 168/168 tests passing overall (41 test
+files, up from 156/39 — 12 new tests across 2 new test files plus 2 additive assertions), 0
+lint/typecheck errors, 0 npm audit vulnerabilities, **no new runtime dependency**. New files
+≤74 lines (`riskAssessor.ts`).
+
 ## Explicitly NOT built yet (do not assume these exist)
 
 - Conflict detection is structural only (same subject, differing `trustLevel`) — there is no
@@ -548,8 +584,17 @@ lines (`memoryStore.ts`); largest touched file remains 108 lines (`argv.ts`).
 - The schema's `history: HistoricalClaim[]` field remains defined but always empty —
   Phase 14 deliberately routed memory through the `EvidenceItem` pipeline instead (see
   [[04-decisions]] #20); nothing populates `history` yet.
+- Phase 15's risk assessment is a **static rule table**, not learned/configurable — the same
+  no-gold-plating rationale as Phase 3's task classifier and Phase 5's authority weights (see
+  [[04-decisions]] #21). It only reasons over what a compilation already gathered (evidence,
+  conflicts, task type); it does not run any tests, does not know the actual diff/change being
+  made, and does not distinguish "no tests exist for this code at all" from "tests exist but
+  weren't matched as evidence." The schema gained no new `risk`/`riskLevel` field — the risk
+  level is only exposed as the leading string in `verification`, not as structured data, so a
+  caller that wants just the level must parse that string (`RiskAssessment`/`assessRisk` are
+  exported for any future surface that wants the structured form directly).
 
 ## Next module to build
 
-Phase 15 (Verification Intelligence) — see [[05-roadmap]] for exit criteria — is the next
+Phase 16 (Engineering Intelligence) — see [[05-roadmap]] for exit criteria — is the next
 gated phase. Not started.

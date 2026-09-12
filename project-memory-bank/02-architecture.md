@@ -5,7 +5,7 @@ actually exists (Phase 1: core types/schema; Phase 2: repository analysis; Phase
 classification; Phase 4: evidence retrieval; Phase 5: evidence ranking; Phase 6: context
 compilation; Phase 7: trust + provenance; Phase 8: CLI; Phase 9: skill integration; Phase 10:
 MCP; Phase 11: evaluation + benchmarking; Phase 12: VS Code extension; Phase 13: GitHub/CI
-integration; Phase 14: engineering memory).
+integration; Phase 14: engineering memory; Phase 15: verification intelligence).
 Recorded here so future phases don't re-derive the target shape and implementation stays
 aligned with the governing spec.
 
@@ -39,7 +39,7 @@ Core must stay independent of any specific UI or agent integration.
 
 `TaskClassifier ✅, TaskNormalizer, RepositoryAnalyzer ✅, FileClassifier ✅, SymbolResolver ✅,
 DependencyAnalyzer ✅, EvidenceRetriever ✅, GitHistoryAnalyzer ✅, ContextRanker ✅, ContextSelector ✅,
-ContextCompressor ✅, TokenBudgetManager ✅, ProvenanceEngine ✅, TrustEngine ✅, VerificationPlanner,
+ContextCompressor ✅, TokenBudgetManager ✅, ProvenanceEngine ✅, TrustEngine ✅, VerificationPlanner ✅,
 ContextPackageBuilder ✅, EvaluationEngine ✅, MemoryEngine ✅, AgentAdapter`
 
 ✅ = implemented: repository analysis (Phase 2, `src/core/repository/`), task classification
@@ -54,7 +54,10 @@ orchestrator (`contextCompiler.ts`, the `ContextPackageBuilder`); trust + proven
 `TrustEngine`), and structural conflict surfacing (`conflictDetector.ts`); engineering memory
 (Phase 14, `src/core/memory/`) — a per-repository JSON store (`memoryStore.ts`, the
 `MemoryEngine`) and a keyword-overlap retriever (`memoryRetriever.ts`) that turns persisted
-decisions/incidents/outcomes into ordinary `EvidenceItem`s. All others: not started.
+decisions/incidents/outcomes into ordinary `EvidenceItem`s; verification intelligence (Phase
+15, `src/core/verification/`) — a deterministic risk scorer (`riskAssessor.ts`, the
+`VerificationPlanner`'s risk half) and a risk-scaled step planner (`verificationPlanner.ts`).
+All others: not started.
 
 The **CLI** (Phase 8, `src/cli/`) is not itself a candidate component — it's the first thin
 surface over the core: `ecc context "<task>"` (`src/cli/cli.ts` → `runContext.ts`) calls the
@@ -135,6 +138,22 @@ command, `ecc memory --type <decision|incident|outcome> --summary "..."`
 (`src/cli/memoryCommand.ts`), since proving the exit criteria needs exactly one way to record
 an entry - MCP/VS Code/GitHub can add their own later without touching `src/core/memory/` at
 all. See [[04-decisions]] #20.
+
+**Verification intelligence** (Phase 15, `src/core/verification/`) is a small, genuinely new
+core component - not a surface. `riskAssessor.ts`'s `assessRisk()` scores task risk
+(`low`/`medium`/`high`) purely from signals every earlier phase already computes: task type
+(behavior-changing types like `modify`/`refactor` score higher), whether the compiled primary
+evidence has any test coverage, whether any primary item has low-trust (`inference`/`unknown`)
+evidence, whether Phase 7's conflict detector surfaced anything, and blast radius (primary
+evidence count). `verificationPlanner.ts`'s `planVerification()` turns that assessment into a
+concrete, risk-scaled step list - a leading `Risk: <level> (<factors>)` line, then steps that
+layer on as risk rises (run existing tests / add missing test coverage, manually verify at
+medium+, request peer review and resolve conflicts at high). `compileContext()` now calls
+`planVerification()` once and assigns the result to `EngineeringContextPackage.verification` -
+a field that existed since Phase 1's schema but was always `[]` until this phase. No schema
+change was needed, so every existing surface (CLI/MCP/VS Code/GitHub) gets a real risk-scaled
+verification plan for free; Phase 13's markdown report already renders `pkg.verification`
+under "Suggested verification". See [[04-decisions]] #21.
 
 ## EngineeringContextPackage (draft schema)
 
