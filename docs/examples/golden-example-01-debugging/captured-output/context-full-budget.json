@@ -1,0 +1,166 @@
+{
+  "version": "0.1",
+  "task": {
+    "type": "investigate",
+    "request": "investigate the intermittent timeout in the payment service"
+  },
+  "repository": {
+    "name": "golden-01-repo",
+    "commit": "06779fd40129d72548aa9ad5e21245913af14180"
+  },
+  "context": {
+    "primary": [
+      {
+        "source": "code",
+        "path": "src/paymentService.ts",
+        "symbols": [
+          "GATEWAY_TIMEOUT_MS"
+        ],
+        "relevance": 0.6,
+        "provenance": {
+          "source": "code",
+          "path": "src/paymentService.ts"
+        },
+        "trustLevel": "fact"
+      },
+      {
+        "source": "test",
+        "path": "test/paymentService.test.ts",
+        "relevance": 0.54,
+        "provenance": {
+          "source": "test",
+          "path": "test/paymentService.test.ts"
+        },
+        "trustLevel": "fact"
+      },
+      {
+        "source": "code",
+        "path": "src/notificationService.ts",
+        "relevance": 0.2,
+        "provenance": {
+          "source": "code",
+          "path": "src/notificationService.ts"
+        },
+        "trustLevel": "fact"
+      },
+      {
+        "source": "code",
+        "path": "src/orderService.ts",
+        "relevance": 0.2,
+        "provenance": {
+          "source": "code",
+          "path": "src/orderService.ts"
+        },
+        "trustLevel": "fact"
+      },
+      {
+        "source": "code",
+        "path": "src/paymentGateway.ts",
+        "relevance": 0.2,
+        "provenance": {
+          "source": "code",
+          "path": "src/paymentGateway.ts"
+        },
+        "trustLevel": "fact"
+      }
+    ],
+    "supporting": [
+      {
+        "source": "git",
+        "path": "src/notificationService.ts",
+        "identifier": "Initial checkout flow: orderService, paymentGateway, notificationService",
+        "relevance": 1,
+        "provenance": {
+          "source": "git",
+          "path": "src/notificationService.ts",
+          "commit": "276f0be8570242907c73c67d4df89ef5fa684911",
+          "timestamp": "2026-09-12"
+        },
+        "trustLevel": "fact"
+      },
+      {
+        "source": "git",
+        "path": "src/orderService.ts",
+        "identifier": "Initial checkout flow: orderService, paymentGateway, notificationService",
+        "relevance": 1,
+        "provenance": {
+          "source": "git",
+          "path": "src/orderService.ts",
+          "commit": "276f0be8570242907c73c67d4df89ef5fa684911",
+          "timestamp": "2026-09-12"
+        },
+        "trustLevel": "fact"
+      },
+      {
+        "source": "git",
+        "path": "src/paymentGateway.ts",
+        "identifier": "Initial checkout flow: orderService, paymentGateway, notificationService",
+        "relevance": 1,
+        "provenance": {
+          "source": "git",
+          "path": "src/paymentGateway.ts",
+          "commit": "276f0be8570242907c73c67d4df89ef5fa684911",
+          "timestamp": "2026-09-12"
+        },
+        "trustLevel": "fact"
+      },
+      {
+        "source": "git",
+        "path": "src/paymentService.ts",
+        "identifier": "Reduce payment gateway timeout from 5000ms to 200ms to speed up checkout under load",
+        "relevance": 1,
+        "provenance": {
+          "source": "git",
+          "path": "src/paymentService.ts",
+          "commit": "06779fd40129d72548aa9ad5e21245913af14180",
+          "timestamp": "2026-09-12"
+        },
+        "trustLevel": "fact"
+      },
+      {
+        "source": "git",
+        "path": "src/paymentService.ts",
+        "identifier": "Add paymentService.chargeCard with a 5000ms gateway timeout",
+        "relevance": 0.8,
+        "provenance": {
+          "source": "git",
+          "path": "src/paymentService.ts",
+          "commit": "7bd420e8085e17e4c6873c78b608212828e0221f",
+          "timestamp": "2026-09-12"
+        },
+        "trustLevel": "fact"
+      },
+      {
+        "source": "memory",
+        "identifier": "Payment gateway timeout spikes under load during peak checkout traffic",
+        "relevance": 0.4,
+        "provenance": {
+          "source": "memory",
+          "identifier": "7260177c-e5a4-469d-877a-20947f4cac79",
+          "timestamp": "2026-09-12T16:12:23.712Z"
+        },
+        "trustLevel": "inference"
+      },
+      {
+        "source": "memory",
+        "identifier": "Reduced payment gateway timeout to 200ms to keep checkout fast under load",
+        "relevance": 0.4,
+        "provenance": {
+          "source": "memory",
+          "identifier": "e729ba7c-307e-4ced-8bf8-ba37e21cd765",
+          "timestamp": "2026-09-12T16:12:24.262Z"
+        },
+        "trustLevel": "inference"
+      }
+    ]
+  },
+  "conflicts": [],
+  "history": [],
+  "constraints": [],
+  "unknowns": [],
+  "verification": [
+    "Risk: low (no elevated risk factors detected)",
+    "Run the existing tests: test/paymentService.test.ts"
+  ],
+  "excluded": []
+}

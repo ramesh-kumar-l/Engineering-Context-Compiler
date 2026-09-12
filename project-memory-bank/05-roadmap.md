@@ -30,3 +30,7 @@ work (e.g. richer outcome signals, a learned re-weighting model once real outcom
 exists, exposing memory/outcome recording via MCP/VS Code/GitHub) is an enhancement to an
 existing phase, not a new gated phase, and still requires explicit authorization (Rule 3)
 before implementation begins.
+
+A separate documentation/visibility task (README, `docs/NewbieQuickStarterGuide.md`, two
+golden examples, a five-post blog series — see [[04-decisions]] #23) is tracked in
+[[implementation-status]], not as a numbered roadmap phase, since it changed no product code.

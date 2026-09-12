@@ -1,0 +1,91 @@
+{
+  "version": "0.1",
+  "task": {
+    "type": "modify",
+    "request": "refactor the duplicated signup and profile update validators into a shared validator module"
+  },
+  "repository": {
+    "name": "golden-02-repo",
+    "commit": "119b4ee28ccfb2b1670db6ec5786469d7f7f1a8c"
+  },
+  "context": {
+    "primary": [
+      {
+        "source": "code",
+        "path": "src/profileUpdateValidator.ts",
+        "symbols": [
+          "validateProfileUpdate"
+        ],
+        "relevance": 0.3,
+        "provenance": {
+          "source": "code",
+          "path": "src/profileUpdateValidator.ts"
+        },
+        "trustLevel": "fact"
+      },
+      {
+        "source": "code",
+        "path": "src/signupValidator.ts",
+        "symbols": [
+          "validateSignup"
+        ],
+        "relevance": 0.2,
+        "provenance": {
+          "source": "code",
+          "path": "src/signupValidator.ts"
+        },
+        "trustLevel": "fact"
+      }
+    ],
+    "supporting": [
+      {
+        "source": "git",
+        "path": "src/profileUpdateValidator.ts",
+        "identifier": "Add profile update form, copied validation from signup under deadline pressure",
+        "relevance": 1,
+        "provenance": {
+          "source": "git",
+          "path": "src/profileUpdateValidator.ts",
+          "commit": "119b4ee28ccfb2b1670db6ec5786469d7f7f1a8c",
+          "timestamp": "2026-09-13"
+        },
+        "trustLevel": "fact"
+      },
+      {
+        "source": "git",
+        "path": "src/signupValidator.ts",
+        "identifier": "Add signup form with inline email/password validation",
+        "relevance": 1,
+        "provenance": {
+          "source": "git",
+          "path": "src/signupValidator.ts",
+          "commit": "3f1a2b9be81a1fc93fddb9b48505b61aa507d7fa",
+          "timestamp": "2026-09-13"
+        },
+        "trustLevel": "fact"
+      },
+      {
+        "source": "memory",
+        "identifier": "Duplicated signup validation into profile update instead of extracting a shared module",
+        "relevance": 0.7,
+        "provenance": {
+          "source": "memory",
+          "identifier": "624903fa-b7b1-456e-9848-91044d89c76a",
+          "timestamp": "2026-09-12T19:59:08.498Z"
+        },
+        "trustLevel": "inference"
+      }
+    ]
+  },
+  "conflicts": [],
+  "history": [],
+  "constraints": [],
+  "unknowns": [],
+  "verification": [
+    "Risk: high (task type 'modify' inherently carries elevated risk; no test evidence found for the affected code)",
+    "No existing tests found for the affected code - add test coverage before merging",
+    "Manually verify the primary evidence above reflects the intended change",
+    "Request a peer review before merging"
+  ],
+  "excluded": []
+}
