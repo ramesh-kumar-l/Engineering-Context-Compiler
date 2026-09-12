@@ -3,8 +3,8 @@
 Status: **design target**, partially implemented — see [[implementation-status]] for what
 actually exists (Phase 1: core types/schema; Phase 2: repository analysis; Phase 3: task
 classification; Phase 4: evidence retrieval; Phase 5: evidence ranking; Phase 6: context
-compilation; Phase 7: trust + provenance). Recorded here so future phases don't re-derive
-the target shape and implementation stays aligned with the governing spec.
+compilation; Phase 7: trust + provenance; Phase 8: CLI). Recorded here so future phases don't
+re-derive the target shape and implementation stays aligned with the governing spec.
 
 ## Target shape
 
@@ -50,6 +50,14 @@ orchestrator (`contextCompiler.ts`, the `ContextPackageBuilder`); trust + proven
 `ProvenanceEngine`), per-source-type trust classification (`trustClassifier.ts`, the
 `TrustEngine`), and structural conflict surfacing (`conflictDetector.ts`). All others: not
 started.
+
+The **CLI** (Phase 8, `src/cli/`) is not itself a candidate component — it's the first thin
+surface over the core: `ecc context "<task>"` (`src/cli/cli.ts` → `runContext.ts`) calls the
+same `analyzeRepository` → `classifyTask` → `retrieveEvidence` → `rankEvidence` →
+`compileContext` pipeline above, adds a `RepositoryRef` (`repositoryRef.ts`, the missing
+`{name, commit}` piece core alone can't produce), and prints/writes the resulting
+`EngineeringContextPackage`. Phase 9 (Skill) and Phase 10 (MCP) are meant to be similarly
+thin wrappers over `runContext`, not reimplementations of it.
 
 ## EngineeringContextPackage (draft schema)
 

@@ -4,7 +4,7 @@ name: implementation-status
 
 # Implementation Status
 
-_Last updated: 2026-09-12 (Phase 7)_
+_Last updated: 2026-09-12 (Phase 8)_
 
 Update this file at the end of every major feature — it is the compressed "what actually
 exists" record so future tasks don't have to re-derive it by reading source.
@@ -22,7 +22,10 @@ exists" record so future tasks don't have to re-derive it by reading source.
   dependency in Phase 2 since it's now used at runtime, not just for `tsc`.
 - **Test runner**: `vitest`. **Typecheck**: `tsc --noEmit`. **Lint**: `eslint` (flat
   config, typescript-eslint recommended rules).
-- **CI**: `.github/workflows/ci.yml` runs typecheck + lint + test on push/PR to `main`.
+- **Build**: `tsc -p tsconfig.build.json` emits plain JS to `dist/` (git-ignored, rebuilt on
+  demand) — added in Phase 8 solely to produce an executable `bin` artifact; `tsconfig.json`
+  itself stays `noEmit` for fast typecheck-only runs.
+- **CI**: `.github/workflows/ci.yml` runs typecheck + lint + test + build on push/PR to `main`.
 
 ## Modularity convention
 
@@ -42,6 +45,7 @@ src/
     compilation/          # Phase 6: context compilation (see table below)
     trust/                # Phase 7: provenance guarantee + trust classification + conflicts
     index.ts              # barrel
+  cli/                   # Phase 8: ecc CLI (see table below)
   index.ts                # package public entry
 test/
   core/contextPackage.test.ts
@@ -50,6 +54,7 @@ test/
   evidence/                 # unit + fixture-repo integration tests per retriever/ranker
   compilation/              # unit + fixture-repo integration tests for Phase 6 modules
   trust/                    # unit tests for Phase 7 modules
+  cli/                      # unit + fixture-repo integration tests for Phase 8 CLI modules
   fixtures/sample-repo/    # static fixture dir analyzed end-to-end by repositoryAnalyzer.test.ts
   fixtures/task-requests.json  # 54 labeled {request, expected TaskType} examples
 ```
@@ -221,16 +226,45 @@ conflict). 91/91 tests passing overall (20 test files, up from 72/17), 0 lint/ty
 errors, 0 npm audit vulnerabilities, no new runtime dependency. New/changed files ≤78 lines
 (schema file, due to the added conflict schema).
 
+## Implemented (Phase 8 — CLI)
+
+| Module | Path | What it does |
+|---|---|---|
+| Repository ref | `src/cli/repositoryRef.ts` | `resolveRepositoryRef(rootDir)` — folder name + `git rev-parse HEAD`; falls back to commit `"unknown"` for a non-git directory rather than throwing (same tolerance as `gitEvidenceRetriever.ts`) |
+| Orchestrator | `src/cli/runContext.ts` | `runContext(repoPath, request, options?)` — the single end-to-end pipeline call: `analyzeRepository` → `classifyTask` → `retrieveEvidence` → `rankEvidence` → `compileContext`; every future surface (skill/MCP) is meant to call this, not re-implement it |
+| Arg parsing | `src/cli/argv.ts` | `parseArgs(argv)` — hand-rolled parser for `context "<task>" [--path] [--out] [--budget]`; no dependency |
+| Output | `src/cli/output.ts` | `formatPackage(pkg)` (pretty JSON), `writePackage(pkg, path)` (writes to a file) |
+| CLI runner | `src/cli/cli.ts` | `runCli(argv)` — wires argv → `runContext` → `validateContextPackage` → print/write; returns an exit code instead of calling `process.exit`, so it's unit-testable without spawning a subprocess |
+| Entry point | `src/cli/index.ts` | Shebang (`#!/usr/bin/env node`) thin wrapper calling `runCli(process.argv.slice(2))` |
+
+`ecc context "<task>"` now runs the full pipeline against a real repository and prints a
+schema-valid `EngineeringContextPackage` to stdout (or writes it to `--out <file>`), satisfying
+Phase 8's exit criteria directly. `npm run build` (`tsc -p tsconfig.build.json`) compiles
+`src/` to `dist/` preserving the shebang, and `package.json`'s `bin.ecc` points at
+`dist/cli/index.js`; CI (`.github/workflows/ci.yml`) now also runs `npm run build` so a
+build-breaking change fails the same way a test-breaking one does. See [[04-decisions]] #14
+for why a build step and hand-rolled arg parsing were chosen over alternatives.
+
+Tested via `runCli`/`runContext` directly (no subprocess spawn, consistent with every other
+integration test in this repo): unknown command and missing-task-description error paths;
+full fixture-repo pipeline produces a package that passes `validateContextPackage`; task
+type/request/repository name flow through unchanged; a tiny `--budget` produces a non-empty
+`excluded`; `resolveRepositoryRef` against a real temp git repo and a non-git directory. Also
+manually smoke-tested the *built* `dist/cli/index.js` end-to-end (shebang intact, `context`,
+`--out`, unknown-command, and missing-task paths all behave as expected). 103/103 tests
+passing overall (24 test files, up from 91/20), 0 lint/typecheck errors, 0 npm audit
+vulnerabilities, no new runtime dependency (typescript's own compiler handles the build).
+New/changed files ≤50 lines.
+
 ## Explicitly NOT built yet (do not assume these exist)
 
 - Conflict detection is structural only (same subject, differing `trustLevel`) — there is no
   semantic/content diff between two claims about the same file, since no such capability
   exists yet. A `path`+`identifier` collision with the *same* `trustLevel` is not flagged even
   if the underlying claims disagree in content.
-- No CLI entry point / `bin` (Phase 8) — deliberately deferred; no invocable surface yet.
-- No skill or MCP server (Phases 9-10).
-- No build/bundle step (`tsc` is `noEmit`-only for now) — will be added when the CLI
-  phase needs an executable artifact.
+- No skill or MCP server (Phases 9-10) — the CLI is currently the only invocable surface.
+- The CLI has exactly one command (`context`) and one output format (pretty JSON) — no
+  `--help`/`--version`, no subcommands, no machine-compact output mode.
 - No persistence/memory engine beyond the markdown files in this directory.
 - Repository analysis has no caching/incremental re-analysis — full walk every call; fine
   at current scale, revisit only if a real repo makes it a measured bottleneck.
@@ -243,4 +277,5 @@ errors, 0 npm audit vulnerabilities, no new runtime dependency. New/changed file
 
 ## Next module to build
 
-Phase 8 (CLI) — see [[05-roadmap]] for exit criteria — is the next gated phase. Not started.
+Phase 9 (Skill Integration) — see [[05-roadmap]] for exit criteria — is the next gated phase.
+Not started.

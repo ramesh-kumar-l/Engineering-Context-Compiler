@@ -13,7 +13,7 @@ blanket authorization** — each phase requires its own explicit go-ahead (Rule 
 | 5 | Evidence Ranking | ✅ Complete | Candidate evidence is scored/ranked using >1 signal (Section 22); ranking is unit-tested against known-good orderings. |
 | 6 | Context Compilation | ✅ Complete | Ranked evidence is selected + compressed into a valid `EngineeringContextPackage` within a token budget, with `excluded` reasons populated. |
 | 7 | Trust + Provenance | ✅ Complete | Every included item carries provenance; FACT/DERIVED/INFERENCE/UNKNOWN is never blurred; conflicting evidence is surfaced, not silently resolved. |
-| 8 | CLI | Not started | `ecc context "<task>"` runs end-to-end against a real repo and prints/saves a valid context package; documented usage. |
+| 8 | CLI | ✅ Complete | `ecc context "<task>"` runs end-to-end against a real repo and prints/saves a valid context package; documented usage. |
 | 9 | Skill Integration | Not started | A Claude skill exists that teaches an agent when/how to invoke ECC, without duplicating existing engineering-methodology skills. |
 | 10 | MCP | Not started | `compile_engineering_context` exposed as an MCP tool; a real MCP client can call it and get a valid package back. |
 | 11 | Evaluation + Benchmarking | Not started | At least one "agent alone vs. agent+ECC" comparison run, with the metrics in [[07-evaluation]] measured, not just defined. |
@@ -25,6 +25,6 @@ blanket authorization** — each phase requires its own explicit go-ahead (Rule 
 
 ## Next recommended phase
 
-**Phase 8 — CLI.** `ecc context "<task>"` runs end-to-end (repository analysis -> task
-classification -> evidence retrieval -> ranking -> compilation -> trust/provenance) against
-a real repo and prints/saves a valid `EngineeringContextPackage`, with documented usage.
+**Phase 9 — Skill Integration.** A Claude skill exists that teaches an agent when/how to
+invoke ECC (via the Phase 8 CLI), without duplicating existing engineering-methodology
+skills.

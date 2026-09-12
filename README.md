@@ -4,7 +4,7 @@ The context and evidence layer for AI-native software engineering: converts a me
 engineering task into the smallest, highest-value, evidence-backed context package an AI
 coding agent needs to solve it.
 
-**Status**: early foundation (Phase 1 of 16). No CLI, skill, or MCP surface yet — see
+**Status**: Phase 8 of 16 (CLI). No skill or MCP surface yet — see
 [`project-memory-bank/implementation-status.md`](project-memory-bank/implementation-status.md)
 for what's built and [`project-memory-bank/05-roadmap.md`](project-memory-bank/05-roadmap.md)
 for the phase plan.
@@ -16,7 +16,25 @@ npm install
 npm run typecheck
 npm run lint
 npm test
+npm run build
 ```
+
+## CLI usage
+
+Build once, then run `ecc context` against any repository:
+
+```bash
+npm run build
+node dist/cli/index.js context "explain the utils module" --path ./my-repo
+```
+
+Prints a schema-valid `EngineeringContextPackage` (see
+[`project-memory-bank/02-architecture.md`](project-memory-bank/02-architecture.md)) as JSON to
+stdout. Flags:
+
+- `--path <dir>` — repository to analyze (default: current directory)
+- `--out <file>` — write the package to a file instead of stdout
+- `--budget <n>` — token budget for evidence selection (default: 4000)
 
 ## Project memory
 
