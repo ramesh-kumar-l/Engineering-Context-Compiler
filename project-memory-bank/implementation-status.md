@@ -4,7 +4,7 @@ name: implementation-status
 
 # Implementation Status
 
-_Last updated: 2026-09-12 (Phase 4)_
+_Last updated: 2026-09-12 (Phase 5)_
 
 Update this file at the end of every major feature — it is the compressed "what actually
 exists" record so future tasks don't have to re-derive it by reading source.
@@ -38,14 +38,14 @@ src/
     contextPackage.ts     # createEmptyContextPackage() factory
     repository/           # Phase 2: repo analysis (see table below)
     task/                 # Phase 3: task classification (see table below)
-    evidence/             # Phase 4: evidence retrieval (see table below)
+    evidence/             # Phase 4-5: evidence retrieval + ranking (see table below)
     index.ts              # barrel
   index.ts                # package public entry
 test/
   core/contextPackage.test.ts
   repository/              # unit tests per module
   task/                     # unit tests + labeled-set accuracy test
-  evidence/                 # unit + fixture-repo integration tests per retriever
+  evidence/                 # unit + fixture-repo integration tests per retriever/ranker
   fixtures/sample-repo/    # static fixture dir analyzed end-to-end by repositoryAnalyzer.test.ts
   fixtures/task-requests.json  # 54 labeled {request, expected TaskType} examples
 ```
@@ -132,10 +132,32 @@ project's own commit history. 47/47 tests passing overall (12 test files, up fro
 0 lint/typecheck errors, 0 npm audit vulnerabilities, no new runtime dependency. All new
 files ≤77 lines.
 
+## Implemented (Phase 5 — Evidence Ranking)
+
+| Module | Path | What it does |
+|---|---|---|
+| Ranker | `src/core/evidence/evidenceRanker.ts` | `rankEvidence(items)` — sorts Phase 4's candidate `EvidenceItem[]` by `computeRankScore()`: relevance × a static per-`EvidenceSourceType` authority weight (`SOURCE_AUTHORITY_WEIGHT`), plus a small specificity bonus for items with resolved `symbols`. Deterministic tiebreak by source-type priority then path/identifier. |
+
+Three independent signals, addressing the cross-source-comparability gap flagged at the end
+of Phase 4 (see [[active-context]] and [[04-decisions]] #9): (1) each item's own relevance
+score from its retriever, (2) a static authority weight per source type (code is ground
+truth > test > git/docs/etc.), and (3) a specificity bonus for symbol-level matches. This
+means a highly-relevant but merely-supplementary git commit no longer outranks a modestly-
+relevant source file — verified directly by a known-good-ordering test. Ranking is a pure,
+non-mutating reordering step, kept separate from retrieval (Phase 4) and from token-budget
+selection (Phase 6's job).
+
+Tested with hand-constructed "known-good ordering" cases (relevance-only ordering,
+authority-driven reordering that contradicts relevance-alone sort, specificity bonus,
+deterministic tie-break, no mutation/no dropped items) plus one fixture-repo integration
+test confirming code evidence ranks above test evidence for the same matched file. 53/53
+tests passing overall (13 test files, up from 47/12), 0 lint/typecheck errors, 0 npm audit
+vulnerabilities, no new runtime dependency. New files ≤80 lines.
+
 ## Explicitly NOT built yet (do not assume these exist)
 
-- No evidence ranking or context compression logic yet (Phases 5-6) — Phase 4's relevance
-  scores are a basic keyword-overlap heuristic per retriever, not a multi-signal ranking.
+- No context compression/selection logic yet (Phase 6) — ranking produces an ordered list
+  only; token-budget-aware selection and `excluded` reasons are Phase 6's job.
 - No CLI entry point / `bin` (Phase 8) — deliberately deferred; no invocable surface yet.
 - No skill or MCP server (Phases 9-10).
 - No build/bundle step (`tsc` is `noEmit`-only for now) — will be added when the CLI
@@ -152,5 +174,5 @@ files ≤77 lines.
 
 ## Next module to build
 
-Phase 5 (Evidence Ranking) — see [[05-roadmap]] for exit criteria — is the next gated
+Phase 6 (Context Compilation) — see [[05-roadmap]] for exit criteria — is the next gated
 phase. Not started.
