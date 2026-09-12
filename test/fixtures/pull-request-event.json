@@ -1,0 +1,8 @@
+{
+  "action": "opened",
+  "pull_request": {
+    "number": 42,
+    "title": "Refactor the utils module",
+    "body": "Cleans up the sample-repo utils helpers ahead of the next release."
+  }
+}

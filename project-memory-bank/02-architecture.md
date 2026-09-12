@@ -4,7 +4,8 @@ Status: **design target**, partially implemented — see [[implementation-status
 actually exists (Phase 1: core types/schema; Phase 2: repository analysis; Phase 3: task
 classification; Phase 4: evidence retrieval; Phase 5: evidence ranking; Phase 6: context
 compilation; Phase 7: trust + provenance; Phase 8: CLI; Phase 9: skill integration; Phase 10:
-MCP; Phase 11: evaluation + benchmarking; Phase 12: VS Code extension).
+MCP; Phase 11: evaluation + benchmarking; Phase 12: VS Code extension; Phase 13: GitHub/CI
+integration).
 Recorded here so future phases don't re-derive the target shape and implementation stays
 aligned with the governing spec.
 
@@ -102,6 +103,19 @@ only registers the one contributed command and delegates to `compileContextComma
 `esbuild` bundle (`vscode-extension/esbuild.mjs`) folds the extension plus its core/CLI
 imports into one self-contained `dist/extension.js`, marking only `vscode` (provided by the
 extension host at runtime) as external. See [[04-decisions]] #18.
+
+The **GitHub integration** (Phase 13, `src/github/`) is a fifth thin surface, and — unlike the
+VS Code extension — lives inside the root package, since a GitHub Actions step needs no special
+manifest incompatible with the root ESM/CLI/MCP package. `runPrCompile.ts` reads the
+`pull_request` event GitHub Actions writes to disk (`prEventContext.ts` parses it into an owner/
+repo/PR-number/task-request tuple), calls the same `runContext` pipeline every other surface
+calls, and hands the validated package to `src/reporting/markdownReport.ts` (a pure,
+GitHub-independent renderer — reusable by any future surface, not GitHub-specific) before
+posting or updating a PR comment through `githubCommentClient.ts` (plain `fetch` against the
+GitHub REST API, no `@octokit`/`@actions` dependency). A hidden HTML-comment marker lets repeat
+runs on the same PR replace their own prior comment instead of accumulating duplicates.
+`.github/workflows/pr-context.yml` runs it on `pull_request` (`opened`/`synchronize`/
+`reopened`) using the workflow's own ambient `GITHUB_TOKEN`. See [[04-decisions]] #19.
 
 ## EngineeringContextPackage (draft schema)
 

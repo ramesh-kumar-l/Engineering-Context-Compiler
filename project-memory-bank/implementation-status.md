@@ -4,7 +4,7 @@ name: implementation-status
 
 # Implementation Status
 
-_Last updated: 2026-09-12 (Phase 12)_
+_Last updated: 2026-09-12 (Phase 13)_
 
 Update this file at the end of every major feature — it is the compressed "what actually
 exists" record so future tasks don't have to re-derive it by reading source.
@@ -32,7 +32,10 @@ exists" record so future tasks don't have to re-derive it by reading source.
 - **Build**: `tsc -p tsconfig.build.json` emits plain JS to `dist/` (git-ignored, rebuilt on
   demand) — added in Phase 8 solely to produce an executable `bin` artifact; `tsconfig.json`
   itself stays `noEmit` for fast typecheck-only runs.
-- **CI**: `.github/workflows/ci.yml` runs typecheck + lint + test + build on push/PR to `main`.
+- **CI**: `.github/workflows/ci.yml` runs typecheck + lint + test + build on push/PR to `main`,
+  plus a `vscode-extension` job for that sibling package. `.github/workflows/pr-context.yml`
+  (Phase 13) posts ECC context on `pull_request` events using only Node 20's built-in `fetch`
+  (no `@octokit`/`@actions` dependency) — see [[04-decisions]] #19.
 
 ## Modularity convention
 
@@ -56,6 +59,8 @@ src/
   cli/                   # Phase 8: ecc CLI (see table below)
   mcp/                   # Phase 10: MCP server (see table below)
   benchmark/              # Phase 11: runnable benchmark surface (see table below)
+  reporting/              # Phase 13: renderMarkdownReport(pkg) - pure, GitHub-independent
+  github/                 # Phase 13: PR context posting surface (see table below)
   index.ts                # package public entry
 skills/
   ecc-context/SKILL.md    # Phase 9: agent-facing skill doc (when/how to call the CLI)
@@ -71,8 +76,11 @@ test/
   mcp/                      # Phase 10: real-MCP-client tests for src/mcp/
   evaluation/               # Phase 11: unit + fixture-repo tests for src/core/evaluation/
   benchmark/                # Phase 11: unit test for src/benchmark/report.ts
+  reporting/                # Phase 13: unit tests for src/reporting/markdownReport.ts
+  github/                   # Phase 13: unit + fixture-repo integration tests for src/github/
   fixtures/sample-repo/    # static fixture dir analyzed end-to-end by repositoryAnalyzer.test.ts
   fixtures/task-requests.json  # 54 labeled {request, expected TaskType} examples
+  fixtures/pull-request-event.json  # sample GitHub Actions pull_request event payload
 
 vscode-extension/          # Phase 12: separate npm package (own package.json/node_modules)
   src/
@@ -403,6 +411,37 @@ tests, 0 lint/typecheck errors, 0 audit vulnerabilities, no root `package.json` 
 added. New files ≤95 lines. CI (`.github/workflows/ci.yml`) gained a second job running the
 same four checks inside `vscode-extension/`.
 
+## Implemented (Phase 13 — GitHub / CI Integrations)
+
+| Module | Path | What it does |
+|---|---|---|
+| Markdown report | `src/reporting/markdownReport.ts` | `renderMarkdownReport(pkg)` — pure, GitHub-independent renderer: task/repository header, primary evidence table, collapsible supporting-evidence table, conflicts/constraints/unknowns/verification/excluded sections, all `\|`-escaped for safe Markdown tables |
+| Event parser | `src/github/prEventContext.ts` | `loadPullRequestEventContext(eventPath, repoSlug)` — reads the GitHub Actions `pull_request` event JSON off disk, extracts `{owner, repo, prNumber}` and derives a task request from the PR title+body (falls back to a generic request if both are empty) |
+| Comment client | `src/github/githubCommentClient.ts` | `upsertPrComment(target, body)` — plain `fetch` against the GitHub REST API; finds a prior ECC comment via a hidden HTML marker and `PATCH`es it, or `POST`s a new one; throws with the response status/body on any non-OK response |
+| Orchestrator | `src/github/runPrCompile.ts` | `main()` — reads `GITHUB_EVENT_PATH`/`GITHUB_REPOSITORY`/`GITHUB_TOKEN`/`GITHUB_WORKSPACE`, calls `runContext` (the same pipeline CLI/MCP/VS Code use), validates the result, renders it via `renderMarkdownReport`, and upserts the PR comment |
+| Entry point | `src/github/index.ts` | Shebang (`#!/usr/bin/env node`) thin wrapper calling `main()` |
+| Workflow | `.github/workflows/pr-context.yml` | Runs on `pull_request` (`opened`/`synchronize`/`reopened`) with `pull-requests: write` permission; checks out full git history (`fetch-depth: 0`, so git evidence retrieval has real history to read), builds, and runs `node dist/github/index.js` with the workflow's ambient `GITHUB_TOKEN` |
+
+Satisfies Phase 13's exit criteria directly: opening or updating a pull request against this
+repository posts a Markdown comment with the ECC-compiled context (affected components as
+primary evidence, relevant tests as part of that same evidence set, and a risk-scaled
+verification list) — posted automatically by CI, with no manual step. A repeat push to the
+same PR replaces the prior comment (marker-based upsert) instead of piling up duplicates. No
+`src/core`/`src/cli` module changed, no new runtime dependency (`fetch` is a Node 20 built-in).
+See [[04-decisions]] #19 and [[02-architecture]] for why this stayed inside the root package
+(unlike Phase 12's VS Code extension) and why no GitHub SDK was added.
+
+Tested with: unit tests for `renderMarkdownReport` (content rendering, empty-list "None"
+fallback, conditional optional sections, table-cell escaping); unit tests for
+`loadPullRequestEventContext` (happy path, malformed `GITHUB_REPOSITORY`, missing
+`pull_request` field) against a static fixture event (`test/fixtures/pull-request-event.json`);
+unit tests for `upsertPrComment` with a stubbed global `fetch` (create path, update-existing
+path, error propagation on a non-OK response); and an integration test for `main()` running the
+**real** `runContext` pipeline against `test/fixtures/sample-repo/` with only `fetch` stubbed,
+confirming the posted comment body actually contains the compiled context. 135/135 tests
+passing overall (35 test files, up from 123/31), 0 lint/typecheck errors, 0 npm audit
+vulnerabilities, no new runtime dependency. New files ≤85 lines.
+
 ## Explicitly NOT built yet (do not assume these exist)
 
 - Conflict detection is structural only (same subject, differing `trustLevel`) — there is no
@@ -443,8 +482,15 @@ same four checks inside `vscode-extension/`.
   offers no way to save/copy the preview's content back out (e.g. "send to agent" is manual
   copy-paste from the webview, not a button) — `contributes.commands`/`menus` intentionally
   stay to the single command Phase 12's exit criteria asks for.
+- The Phase 13 GitHub integration only triggers on `pull_request` (`opened`/`synchronize`/
+  `reopened`) against this repository's own workflow; fork PRs get a read-only `GITHUB_TOKEN`
+  under that trigger and so will **not** receive a comment (fixing this would require
+  `pull_request_target`, deliberately rejected as a security risk — see [[04-decisions]] #19).
+  There is no status-check/annotation surface (only a PR comment), no per-repo configuration
+  (token budget is a fixed env var, not a workflow input), and no CI-integration beyond GitHub
+  (no GitLab/Bitbucket equivalent).
 
 ## Next module to build
 
-Phase 13 (GitHub / CI Integrations) — see [[05-roadmap]] for exit criteria — is the next
-gated phase. Not started.
+Phase 14 (Engineering Memory) — see [[05-roadmap]] for exit criteria — is the next gated
+phase. Not started.

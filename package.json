@@ -10,7 +10,8 @@
   "main": "./src/index.ts",
   "bin": {
     "ecc": "./dist/cli/index.js",
-    "ecc-mcp": "./dist/mcp/index.js"
+    "ecc-mcp": "./dist/mcp/index.js",
+    "ecc-pr-context": "./dist/github/index.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

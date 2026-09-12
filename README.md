@@ -4,7 +4,7 @@ The context and evidence layer for AI-native software engineering: converts a me
 engineering task into the smallest, highest-value, evidence-backed context package an AI
 coding agent needs to solve it.
 
-**Status**: Phase 12 of 16 (VS Code Extension). See
+**Status**: Phase 13 of 16 (GitHub / CI Integrations). See
 [`project-memory-bank/implementation-status.md`](project-memory-bank/implementation-status.md)
 for what's built and [`project-memory-bank/05-roadmap.md`](project-memory-bank/05-roadmap.md)
 for the phase plan.
@@ -80,6 +80,24 @@ Command Palette, and choose **Compile Engineering Context** to describe a task a
 resulting `EngineeringContextPackage` in a webview panel. See
 [`vscode-extension/README.md`](vscode-extension/README.md) for setup and development
 (`cd vscode-extension && npm install && npm run build`, then F5 in VS Code to try it).
+
+## GitHub PR context
+
+[`.github/workflows/pr-context.yml`](.github/workflows/pr-context.yml) runs on every pull
+request (opened/synchronized/reopened) against this repository: it builds the project, runs
+the same `runContext` pipeline the CLI/MCP/VS Code use against the checked-out PR, and posts
+(or updates, on a later push) a Markdown comment with the compiled `EngineeringContextPackage`
+— affected components, relevant tests, and a risk-scaled verification list. No setup required
+beyond the workflow's own ambient `GITHUB_TOKEN`; fork PRs won't get a comment since their
+token is read-only under the `pull_request` trigger (a deliberate security trade-off — see
+[`project-memory-bank/04-decisions.md`](project-memory-bank/04-decisions.md) #19). To run it
+manually:
+
+```bash
+npm run build
+GITHUB_EVENT_PATH=./event.json GITHUB_REPOSITORY=owner/repo GITHUB_TOKEN=... \
+  node dist/github/index.js
+```
 
 ## Agent skill
 

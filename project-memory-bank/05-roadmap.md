@@ -18,12 +18,12 @@ blanket authorization** — each phase requires its own explicit go-ahead (Rule 
 | 10 | MCP | ✅ Complete | `compile_engineering_context` exposed as an MCP tool; a real MCP client can call it and get a valid package back. |
 | 11 | Evaluation + Benchmarking | ✅ Complete | At least one "agent alone vs. agent+ECC" comparison run, with the metrics in [[07-evaluation]] measured, not just defined. |
 | 12 | VS Code Extension | ✅ Complete | Right-click "Compile Engineering Context" produces a preview the user can send to an agent; extension is a thin client over CLI/core. |
-| 13 | GitHub / CI Integrations | Not started | A PR gets ECC-compiled context (affected components, relevant tests, risk) posted or made available automatically. |
+| 13 | GitHub / CI Integrations | ✅ Complete | A PR gets ECC-compiled context (affected components, relevant tests, risk) posted or made available automatically. |
 | 14 | Engineering Memory | Not started | Architectural decisions/incidents/outcomes persist across sessions and are retrievable as evidence in later compilations. |
 | 15 | Verification Intelligence | Not started | ECC recommends a verification plan (tests/checks) scaled to task risk (Section 41-42). |
 | 16 | Engineering Intelligence | Not started | Outcomes feed back into ranking/memory quality over time (Section 72's feedback loop closes at least once). |
 
 ## Next recommended phase
 
-**Phase 13 — GitHub / CI Integrations.** Get ECC-compiled context (affected components,
-relevant tests, risk) posted or made available automatically on a PR.
+**Phase 14 — Engineering Memory.** Persist architectural decisions/incidents/outcomes across
+sessions so they're retrievable as evidence in later compilations.
