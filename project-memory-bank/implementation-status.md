@@ -4,7 +4,7 @@ name: implementation-status
 
 # Implementation Status
 
-_Last updated: 2026-09-12 (Phase 2)_
+_Last updated: 2026-09-12 (Phase 3)_
 
 Update this file at the end of every major feature — it is the compressed "what actually
 exists" record so future tasks don't have to re-derive it by reading source.
@@ -37,12 +37,15 @@ src/
     schema/               # zod schema + validateContextPackage()
     contextPackage.ts     # createEmptyContextPackage() factory
     repository/           # Phase 2: repo analysis (see table below)
+    task/                 # Phase 3: task classification (see table below)
     index.ts              # barrel
   index.ts                # package public entry
 test/
   core/contextPackage.test.ts
   repository/              # unit tests per module
+  task/                     # unit tests + labeled-set accuracy test
   fixtures/sample-repo/    # static fixture dir analyzed end-to-end by repositoryAnalyzer.test.ts
+  fixtures/task-requests.json  # 54 labeled {request, expected TaskType} examples
 ```
 
 ## Implemented (Phase 1 — ECC Foundation)
@@ -83,9 +86,31 @@ Tested against `test/fixtures/sample-repo/` (a static 3-file TS package with a t
 (5 test files), 0 lint errors, 0 typecheck errors, 0 npm audit vulnerabilities. All new
 files 101 lines or fewer.
 
+## Implemented (Phase 3 — Task Understanding)
+
+| Module | Path | What it does |
+|---|---|---|
+| Types | `src/core/task/types.ts` | `TaskClassification { type, confidence }`, `TaskSignal { pattern, weight }` |
+| Signals | `src/core/task/signals.ts` | `TASK_SIGNALS`: per-`TaskType` regex/weight pairs (weight 1 = generic verb, weight 2-3 = specific/compound phrase) |
+| Classifier | `src/core/task/taskClassifier.ts` | `classifyTask(request)` — lowercases the request, sums weighted signal matches per `TaskType`, returns the top scorer; falls back to `explain` at confidence 0 when nothing matches |
+
+Deliberately rule-based, not model-based: deterministic, dependency-free (no network call,
+no new package), and instantly testable — sufficient for "reasonable accuracy" per the
+Phase 3 exit criteria. Confidence is `(best - runnerUp) / best`, so exact ties are
+confidence 0 and a lone matching type is confidence 1; downstream phases (e.g. Trust/
+Provenance in Phase 7) can use this to flag low-confidence classifications rather than
+treating them as fact.
+
+Tested against a 54-example hand-labeled set (`test/fixtures/task-requests.json`, 6 per
+`TaskType`) plus unit tests for edge cases (empty input, case-insensitivity, weighted
+tie-breaking). **Measured accuracy: 54/54 (100%) on the labeled set**; test asserts a
+≥85% floor so the suite doesn't silently regress if signals are edited later. 34/34 tests
+passing overall (7 test files), 0 lint/typecheck errors, 0 npm audit vulnerabilities. All
+new files ≤128 lines.
+
 ## Explicitly NOT built yet (do not assume these exist)
 
-- No task classification, evidence retrieval, ranking, or compression logic (Phases 3-6).
+- No evidence retrieval, ranking, or compression logic (Phases 4-6).
 - No CLI entry point / `bin` (Phase 8) — deliberately deferred; no invocable surface yet.
 - No skill or MCP server (Phases 9-10).
 - No build/bundle step (`tsc` is `noEmit`-only for now) — will be added when the CLI
@@ -96,8 +121,11 @@ files 101 lines or fewer.
 - Symbol resolution does not follow re-exports (`export * from './x.js'`) to attribute
   symbols to their original declaring file — each file's symbols are its own top-level
   declarations only.
+- Task classification is single-label and keyword/regex-based only — no multi-label
+  output, no ML/embedding-based classification, no request normalization beyond
+  lowercasing (e.g. no typo correction).
 
 ## Next module to build
 
-Phase 3 (Task Understanding) — see [[05-roadmap]] for exit criteria — is the next gated
+Phase 4 (Evidence Retrieval) — see [[05-roadmap]] for exit criteria — is the next gated
 phase. Not started.
