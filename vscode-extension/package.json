@@ -1,0 +1,69 @@
+{
+  "name": "ecc-vscode",
+  "displayName": "Engineering Context Compiler",
+  "description": "Compile a task into an evidence-backed engineering context package, right from the editor.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "publisher": "ecc-project",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "ecc.compileContext",
+        "title": "Compile Engineering Context"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "ecc.compileContext",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "ecc.compileContext",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "ecc.compileContext"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Engineering Context Compiler",
+      "properties": {
+        "ecc.tokenBudget": {
+          "type": "number",
+          "default": 4000,
+          "description": "Token budget for evidence selection (same default as the ECC CLI)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^8.19.1",
+    "@typescript-eslint/parser": "^8.19.1",
+    "esbuild": "^0.28.2",
+    "eslint": "^9.18.0",
+    "typescript": "^5.7.3",
+    "vitest": "^5.0.0",
+    "zod": "^3.24.1"
+  }
+}

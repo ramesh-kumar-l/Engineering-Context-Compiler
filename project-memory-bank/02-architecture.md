@@ -4,7 +4,7 @@ Status: **design target**, partially implemented — see [[implementation-status
 actually exists (Phase 1: core types/schema; Phase 2: repository analysis; Phase 3: task
 classification; Phase 4: evidence retrieval; Phase 5: evidence ranking; Phase 6: context
 compilation; Phase 7: trust + provenance; Phase 8: CLI; Phase 9: skill integration; Phase 10:
-MCP; Phase 11: evaluation + benchmarking).
+MCP; Phase 11: evaluation + benchmarking; Phase 12: VS Code extension).
 Recorded here so future phases don't re-derive the target shape and implementation stays
 aligned with the governing spec.
 
@@ -88,6 +88,20 @@ retrieveEvidence → rankEvidence → compileContext` chain `runContext` uses (n
 `BenchmarkTask`'s hand-picked ground truth. `src/benchmark/` is the runnable thin surface over
 it (`benchmarkTasks.ts`, `report.ts`, `runBenchmark.ts` — `npm run benchmark`), mirroring the
 CLI/MCP pattern once more: no scoring logic lives there, only task data and report formatting.
+
+The **VS Code extension** (Phase 12, `vscode-extension/`, a separate npm package sibling to
+the root one — a VS Code manifest needs `engines.vscode`/`contributes`/`activationEvents`
+fields and a `require()`-able CJS `main` incompatible with the root package's ESM/CLI/MCP
+`bin`s) is a fourth thin surface: `src/compileContextCommand.ts` imports `runContext` and
+`validateContextPackage` directly from the root `src/cli/runContext.js` /
+`src/core/schema/validate.js` (no child-process spawn, no reimplementation), resolves a target
+directory from the right-clicked resource (or the first workspace folder), prompts for the
+task, and hands the validated package to `src/preview.ts` (a pure, vscode-independent HTML
+renderer) for display in a webview panel. `src/extension.ts` is the thinnest layer of all — it
+only registers the one contributed command and delegates to `compileContextCommand.ts`. An
+`esbuild` bundle (`vscode-extension/esbuild.mjs`) folds the extension plus its core/CLI
+imports into one self-contained `dist/extension.js`, marking only `vscode` (provided by the
+extension host at runtime) as external. See [[04-decisions]] #18.
 
 ## EngineeringContextPackage (draft schema)
 

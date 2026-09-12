@@ -4,7 +4,7 @@ name: implementation-status
 
 # Implementation Status
 
-_Last updated: 2026-09-12 (Phase 11)_
+_Last updated: 2026-09-12 (Phase 12)_
 
 Update this file at the end of every major feature — it is the compressed "what actually
 exists" record so future tasks don't have to re-derive it by reading source.
@@ -12,10 +12,15 @@ exists" record so future tasks don't have to re-derive it by reading source.
 ## Stack
 
 - **Language/runtime**: TypeScript on Node.js (>=20), ESM (`"type": "module"`).
-- **Rationale** (see [[04-decisions]] #5): MCP's reference SDK is TypeScript; the planned
-  VS Code extension (Phase 12) must be TypeScript regardless; `npx`-based zero-install
-  distribution matches the CLI-first strategy in the master prompt. Consolidating on one
-  language across CLI + MCP + VS Code avoids polyglot maintenance overhead.
+- **Rationale** (see [[04-decisions]] #5): MCP's reference SDK is TypeScript; the VS Code
+  extension (Phase 12) is TypeScript regardless; `npx`-based zero-install distribution
+  matches the CLI-first strategy in the master prompt. Consolidating on one language across
+  CLI + MCP + VS Code avoids polyglot maintenance overhead.
+- **VS Code extension packaging**: `vscode-extension/` is a **separate npm package** (own
+  `package.json`/`node_modules`/CI job — see [[04-decisions]] #18) bundled with `esbuild` into
+  one self-contained `dist/extension.js`, since a VS Code manifest needs fields (`engines.
+  vscode`, `contributes`, `activationEvents`, a `require()`-able CJS `main`) the root ESM
+  package/CLI/MCP `bin`s don't carry.
 - **Runtime schema validation**: `zod`.
 - **MCP**: `@modelcontextprotocol/sdk` (official reference SDK) — added in Phase 10 solely for
   the `compile_engineering_context` tool server; not used anywhere else.
@@ -68,6 +73,18 @@ test/
   benchmark/                # Phase 11: unit test for src/benchmark/report.ts
   fixtures/sample-repo/    # static fixture dir analyzed end-to-end by repositoryAnalyzer.test.ts
   fixtures/task-requests.json  # 54 labeled {request, expected TaskType} examples
+
+vscode-extension/          # Phase 12: separate npm package (own package.json/node_modules)
+  src/
+    extension.ts            # activate()/deactivate() - registers ecc.compileContext
+    compileContextCommand.ts # vscode-dependent glue: resolves target dir, prompts, calls runContext
+    preview.ts               # pure renderPreviewHtml(pkg) - no vscode import, unit-tested directly
+  test/
+    vscodeMock.ts             # hand-written 'vscode' module test double, aliased in vitest.config.ts
+    extension.test.ts
+    compileContextCommand.test.ts
+    preview.test.ts
+  esbuild.mjs                 # bundles src/extension.ts + its ../src imports into dist/extension.js
 ```
 
 ## Implemented (Phase 1 — ECC Foundation)
@@ -353,6 +370,39 @@ for `formatReport`'s output shape. 123/123 tests passing overall (31 test files,
 113/27), 0 lint/typecheck errors, 0 npm audit vulnerabilities, **no new runtime dependency**.
 New files ≤65 lines.
 
+## Implemented (Phase 12 — VS Code Extension)
+
+| Module | Path | What it does |
+|---|---|---|
+| Extension entry | `vscode-extension/src/extension.ts` | `activate(context)`/`deactivate()` — registers the single `ecc.compileContext` command and delegates to `compileContextCommand.ts`; no other logic |
+| Command handler | `vscode-extension/src/compileContextCommand.ts` | `compileEngineeringContext(uri?)` — resolves a target directory (right-clicked resource, or its containing folder if a file, or the first workspace folder), prompts for the task via `showInputBox`, reads `ecc.tokenBudget` from VS Code settings, calls `runContext` (imported directly from `../src/cli/runContext.js`) inside a progress notification, validates the result, and shows it in a webview panel |
+| Preview renderer | `vscode-extension/src/preview.ts` | `renderPreviewHtml(pkg)` — pure, vscode-independent function rendering task/repository/primary+supporting evidence/conflicts/unknowns/excluded as themed, HTML-escaped HTML |
+| Test double | `vscode-extension/test/vscodeMock.ts` | Hand-written fake of the subset of the `vscode` API this extension uses (`commands`, `window`, `workspace`), aliased to the real `vscode` import via `vitest.config.ts`'s `resolve.alias` so command-wiring logic gets automated coverage without a real VS Code host |
+| Build | `vscode-extension/esbuild.mjs` | Bundles `src/extension.ts` and everything it imports (including `../src/cli/runContext.ts` and its core dependencies, `zod`, `typescript`) into one self-contained `dist/extension.js`, marking only `vscode` external |
+
+Satisfies Phase 12's exit criteria directly: the extension contributes **Compile Engineering
+Context** to the Explorer context menu, the editor context menu, and the Command Palette;
+invoking it against a real directory prompts for a task, runs the identical `runContext`
+pipeline the CLI/MCP use, and renders a schema-validated `EngineeringContextPackage` as a
+webview preview beside the editor — a thin client, not a reimplementation (see
+[[04-decisions]] #18 and [[02-architecture]]).
+
+Tested three ways: (1) `preview.test.ts` — pure unit tests of `renderPreviewHtml` (content
+rendering, empty-list handling, conditional sections, HTML-escaping of free-text input); (2)
+`compileContextCommand.test.ts` — the `vscode` module mocked, but `runContext` itself is
+**real**, run against `test/fixtures/sample-repo/` (no-workspace error path, cancelled-prompt
+no-op, right-clicked-file-falls-back-to-its-folder, and the full happy path producing a
+webview with the compiled package's content); (3) `extension.test.ts` — command registration
+and delegation, with `compileContextCommand.ts` mocked to isolate the wiring itself. Not
+covered: a real `@vscode/test-electron` end-to-end run (menu actually appearing, real webview
+rendering in a live VS Code window) — see [[04-decisions]] #18 for why, and the "Explicitly
+NOT built yet" list below. `vscode-extension/` has its own `npm run typecheck && npm run lint
+&& npm test && npm run build`: 11/11 tests passing (3 test files), 0 lint/typecheck errors, 0
+npm audit vulnerabilities, clean `esbuild` bundle. Root project unaffected: still 123/123
+tests, 0 lint/typecheck errors, 0 audit vulnerabilities, no root `package.json` dependency
+added. New files ≤95 lines. CI (`.github/workflows/ci.yml`) gained a second job running the
+same four checks inside `vscode-extension/`.
+
 ## Explicitly NOT built yet (do not assume these exist)
 
 - Conflict detection is structural only (same subject, differing `trustLevel`) — there is no
@@ -386,8 +436,15 @@ New files ≤65 lines.
 - The benchmark suite has exactly three tasks, all against this one repository — no unseen-
   repo, temporal-holdout, adversarial, or cross-language coverage yet (see [[07-evaluation]]'s
   "Benchmark" section for what's still open).
+- The VS Code extension has no `@vscode/test-electron` end-to-end test (a real VS Code host
+  actually rendering the context menu / webview) — only a mocked-`vscode`-module unit-test
+  suite plus a documented manual F5 smoke-test procedure (`vscode-extension/README.md`). It is
+  not published to the Marketplace, not packaged as a `.vsix`, has no icon/gallery banner, and
+  offers no way to save/copy the preview's content back out (e.g. "send to agent" is manual
+  copy-paste from the webview, not a button) — `contributes.commands`/`menus` intentionally
+  stay to the single command Phase 12's exit criteria asks for.
 
 ## Next module to build
 
-Phase 12 (VS Code Extension) — see [[05-roadmap]] for exit criteria — is the next gated
-phase. Not started.
+Phase 13 (GitHub / CI Integrations) — see [[05-roadmap]] for exit criteria — is the next
+gated phase. Not started.

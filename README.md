@@ -4,7 +4,7 @@ The context and evidence layer for AI-native software engineering: converts a me
 engineering task into the smallest, highest-value, evidence-backed context package an AI
 coding agent needs to solve it.
 
-**Status**: Phase 11 of 16 (Evaluation + Benchmarking). See
+**Status**: Phase 12 of 16 (VS Code Extension). See
 [`project-memory-bank/implementation-status.md`](project-memory-bank/implementation-status.md)
 for what's built and [`project-memory-bank/05-roadmap.md`](project-memory-bank/05-roadmap.md)
 for the phase plan.
@@ -71,6 +71,15 @@ report comparing evidence recall, irrelevant-evidence rate, provenance completen
 estimated tokens. See
 [`project-memory-bank/07-evaluation.md`](project-memory-bank/07-evaluation.md) for the metrics
 definitions and the last measured run.
+
+## VS Code extension
+
+[`vscode-extension/`](vscode-extension/) is a thin client over the same `runContext` pipeline
+the CLI/MCP use: right-click a folder/file (Explorer or editor context menu), or use the
+Command Palette, and choose **Compile Engineering Context** to describe a task and preview the
+resulting `EngineeringContextPackage` in a webview panel. See
+[`vscode-extension/README.md`](vscode-extension/README.md) for setup and development
+(`cd vscode-extension && npm install && npm run build`, then F5 in VS Code to try it).
 
 ## Agent skill
 
