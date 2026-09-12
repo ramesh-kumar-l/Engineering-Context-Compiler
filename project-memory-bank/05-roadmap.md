@@ -16,7 +16,7 @@ blanket authorization** — each phase requires its own explicit go-ahead (Rule 
 | 8 | CLI | ✅ Complete | `ecc context "<task>"` runs end-to-end against a real repo and prints/saves a valid context package; documented usage. |
 | 9 | Skill Integration | ✅ Complete | A Claude skill exists that teaches an agent when/how to invoke ECC, without duplicating existing engineering-methodology skills. |
 | 10 | MCP | ✅ Complete | `compile_engineering_context` exposed as an MCP tool; a real MCP client can call it and get a valid package back. |
-| 11 | Evaluation + Benchmarking | Not started | At least one "agent alone vs. agent+ECC" comparison run, with the metrics in [[07-evaluation]] measured, not just defined. |
+| 11 | Evaluation + Benchmarking | ✅ Complete | At least one "agent alone vs. agent+ECC" comparison run, with the metrics in [[07-evaluation]] measured, not just defined. |
 | 12 | VS Code Extension | Not started | Right-click "Compile Engineering Context" produces a preview the user can send to an agent; extension is a thin client over CLI/core. |
 | 13 | GitHub / CI Integrations | Not started | A PR gets ECC-compiled context (affected components, relevant tests, risk) posted or made available automatically. |
 | 14 | Engineering Memory | Not started | Architectural decisions/incidents/outcomes persist across sessions and are retrievable as evidence in later compilations. |
@@ -25,5 +25,6 @@ blanket authorization** — each phase requires its own explicit go-ahead (Rule 
 
 ## Next recommended phase
 
-**Phase 11 — Evaluation + Benchmarking.** Run at least one "agent alone vs. agent+ECC"
-comparison, measuring the metrics defined in [[07-evaluation]] rather than just defining them.
+**Phase 12 — VS Code Extension.** A right-click "Compile Engineering Context" command that
+produces a preview the user can send to an agent, built as a thin client over the existing
+CLI/core rather than a reimplementation.

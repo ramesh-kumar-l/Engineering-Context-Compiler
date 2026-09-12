@@ -1,8 +1,8 @@
 # 07 — Evaluation
 
-Status: **no implementation exists yet, so no evaluation has been run.** This file records
-the framework from the master prompt (Sections 43-44) for when Phase 11 (or earlier ad-hoc
-evaluation) becomes relevant.
+Status: **implemented and run (Phase 11)** — see [[implementation-status]] for the module
+table (`src/core/evaluation/`, `src/benchmark/`) and [[04-decisions]] #17 for why the
+"agent alone" condition is a simulated naive-agent baseline rather than a live second LLM.
 
 ## Critical experiment (once something is built)
 
@@ -16,12 +16,35 @@ Strong AI agent alone **vs.** strong AI agent + ECC. Never compare against a wea
 - **Efficiency**: tokens, agent turns, latency, compute cost, time saved.
 - **Trust**: unsupported claims, hallucination rate, correction rate, provenance accuracy.
 
-## Benchmark (future, Phase 11)
+## Benchmark (implemented, Phase 11)
 
-Each benchmark task should carry: repository, task, ground-truth relevant evidence, known
-constraints, historical facts, expected verification. Use unseen repos, temporal holdouts,
-adversarial tasks, large repos, legacy systems, monorepos, real-world tasks — avoid leakage.
+Each benchmark task carries: a free-text request and hand-picked ground-truth relevant paths
+(`src/core/evaluation/types.ts`'s `BenchmarkTask`). `src/benchmark/benchmarkTasks.ts` defines
+three tasks against **this repository's own real codebase** (dogfooding — resolves the
+"no target repository chosen" gap flagged since Phase 10), not only the tiny test fixture.
+`npm run benchmark` runs `retrieveBaselineEvidence` ("agent alone": keyword grep, no
+ranking/trust/compression) and the core pipeline ("agent+ECC") against each task and scores
+both against the same ground truth. Future extensions (unseen repos, temporal holdouts,
+adversarial/legacy/monorepo tasks) remain open — three same-repo tasks satisfy "at least one"
+but are not exhaustive coverage.
 
 ## Current baseline
 
-None. Nothing to compare yet — see [[implementation-status]].
+**Measured 2026-09-12** via `npm run benchmark` against this repository (3 tasks; see
+[[implementation-status]] Phase 11 section for the exact tasks). Average across all three:
+
+| Metric | Agent alone | Agent + ECC |
+|---|---|---|
+| Evidence recall | 67% | 100% |
+| Irrelevant evidence rate | 72% | 87% |
+| Provenance completeness | 0% | 100% |
+| Estimated tokens | 2833 | 1053 |
+
+ECC recalls all ground-truth-relevant files every time (baseline misses one file in two of
+three tasks); every ECC item carries provenance/trust by construction (Phase 7), the baseline
+has none; ECC's compression uses roughly a third of the tokens the baseline spends reading
+whole files. The one metric where ECC measures worse — irrelevant evidence rate — is honest,
+not a flaw hidden by cherry-picked tasks: each task's ground truth is a narrow 2-path list,
+and ECC's supplementary git/test evidence (which the baseline never retrieves at all) counts
+as "irrelevant" under this metric's strict definition even though it's legitimate supporting
+context. Recorded as-is per [[04-decisions]] #17.

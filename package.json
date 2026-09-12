@@ -17,7 +17,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "benchmark": "node dist/benchmark/runBenchmark.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

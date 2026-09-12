@@ -4,7 +4,7 @@ Status: **design target**, partially implemented — see [[implementation-status
 actually exists (Phase 1: core types/schema; Phase 2: repository analysis; Phase 3: task
 classification; Phase 4: evidence retrieval; Phase 5: evidence ranking; Phase 6: context
 compilation; Phase 7: trust + provenance; Phase 8: CLI; Phase 9: skill integration; Phase 10:
-MCP).
+MCP; Phase 11: evaluation + benchmarking).
 Recorded here so future phases don't re-derive the target shape and implementation stays
 aligned with the governing spec.
 
@@ -39,7 +39,7 @@ Core must stay independent of any specific UI or agent integration.
 `TaskClassifier ✅, TaskNormalizer, RepositoryAnalyzer ✅, FileClassifier ✅, SymbolResolver ✅,
 DependencyAnalyzer ✅, EvidenceRetriever ✅, GitHistoryAnalyzer ✅, ContextRanker ✅, ContextSelector ✅,
 ContextCompressor ✅, TokenBudgetManager ✅, ProvenanceEngine ✅, TrustEngine ✅, VerificationPlanner,
-ContextPackageBuilder ✅, EvaluationEngine, MemoryEngine, AgentAdapter`
+ContextPackageBuilder ✅, EvaluationEngine ✅, MemoryEngine, AgentAdapter`
 
 ✅ = implemented: repository analysis (Phase 2, `src/core/repository/`), task classification
 (Phase 3, `src/core/task/`), evidence retrieval incl. git history (Phase 4,
@@ -77,6 +77,17 @@ or divergent result there would mean a wrong `runContext`, not a wrong MCP wrapp
 the CLI's process-exit-code error model, the tool handler never throws: any failure (bad
 path, invalid input, an internal validation error) comes back as a normal MCP `CallToolResult`
 with `isError: true`, since an MCP server must keep the connection alive across a bad call.
+
+The **EvaluationEngine** (Phase 11, `src/core/evaluation/`) is a genuine core component, not a
+surface — it measures the pipeline rather than exposing it. `baselineRetriever.ts` simulates
+the "agent alone" condition (naive keyword grep, no ranking/trust/compression);
+`evaluationRunner.ts` re-composes the same `analyzeRepository → classifyTask →
+retrieveEvidence → rankEvidence → compileContext` chain `runContext` uses (not by importing
+`runContext` itself, to keep core independent of the CLI surface per the rule above) for the
+"agent+ECC" condition; `metrics.ts` scores both conditions identically against a
+`BenchmarkTask`'s hand-picked ground truth. `src/benchmark/` is the runnable thin surface over
+it (`benchmarkTasks.ts`, `report.ts`, `runBenchmark.ts` — `npm run benchmark`), mirroring the
+CLI/MCP pattern once more: no scoring logic lives there, only task data and report formatting.
 
 ## EngineeringContextPackage (draft schema)
 

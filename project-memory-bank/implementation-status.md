@@ -4,7 +4,7 @@ name: implementation-status
 
 # Implementation Status
 
-_Last updated: 2026-09-12 (Phase 10)_
+_Last updated: 2026-09-12 (Phase 11)_
 
 Update this file at the end of every major feature — it is the compressed "what actually
 exists" record so future tasks don't have to re-derive it by reading source.
@@ -46,9 +46,11 @@ src/
     evidence/             # Phase 4-5: evidence retrieval + ranking (see table below)
     compilation/          # Phase 6: context compilation (see table below)
     trust/                # Phase 7: provenance guarantee + trust classification + conflicts
+    evaluation/            # Phase 11: agent-alone-vs-agent+ECC metrics engine (see table below)
     index.ts              # barrel
   cli/                   # Phase 8: ecc CLI (see table below)
   mcp/                   # Phase 10: MCP server (see table below)
+  benchmark/              # Phase 11: runnable benchmark surface (see table below)
   index.ts                # package public entry
 skills/
   ecc-context/SKILL.md    # Phase 9: agent-facing skill doc (when/how to call the CLI)
@@ -62,6 +64,8 @@ test/
   cli/                      # unit + fixture-repo integration tests for Phase 8 CLI modules
   skill/                    # Phase 9: doc-consistency test for skills/ecc-context/SKILL.md
   mcp/                      # Phase 10: real-MCP-client tests for src/mcp/
+  evaluation/               # Phase 11: unit + fixture-repo tests for src/core/evaluation/
+  benchmark/                # Phase 11: unit test for src/benchmark/report.ts
   fixtures/sample-repo/    # static fixture dir analyzed end-to-end by repositoryAnalyzer.test.ts
   fixtures/task-requests.json  # 54 labeled {request, expected TaskType} examples
 ```
@@ -314,6 +318,41 @@ real process wiring work end-to-end (mirrors the Phase 8 CLI smoke test). 113/11
 passing overall (27 test files, up from 107/25), 0 lint/typecheck errors, 0 npm audit
 vulnerabilities. New runtime dependency: `@modelcontextprotocol/sdk`. New files ≤75 lines.
 
+## Implemented (Phase 11 — Evaluation + Benchmarking)
+
+| Module | Path | What it does |
+|---|---|---|
+| Types | `src/core/evaluation/types.ts` | `BenchmarkTask { name, request, groundTruthRelevantPaths }`, `ConditionMetrics { evidenceRecall, irrelevantEvidenceRate, provenanceCompleteness, totalTokens, itemCount }`, `EvaluationResult` |
+| Metrics | `src/core/evaluation/metrics.ts` | `computeConditionMetrics(input)` — pure scoring shared by both conditions: recall/irrelevance against ground truth, path de-duplication |
+| Baseline retriever | `src/core/evaluation/baselineRetriever.ts` | `retrieveBaselineEvidence(rootDir, request, tokenBudget)` — the "agent alone" condition: naive keyword grep over source-file paths in walk order, reading whole matched files until the token budget runs out; no ranking/trust/compression |
+| Evaluation runner | `src/core/evaluation/evaluationRunner.ts` | `runEvaluation(rootDir, task, tokenBudget?)` — runs both conditions against the same repo/task and scores each; the "agent+ECC" side re-composes `analyzeRepository → classifyTask → retrieveEvidence → rankEvidence → compileContext` directly (not via `runContext`) to stay a pure core module |
+| Benchmark tasks | `src/benchmark/benchmarkTasks.ts` | Three `BenchmarkTask`s against **this repository's own real codebase** (trust-level extension, token-budget fix, ranking-recency signal) |
+| Report | `src/benchmark/report.ts` | `formatReport(results)` — per-task comparison tables + an averaged summary, as markdown |
+| Entry point | `src/benchmark/runBenchmark.ts` | `npm run benchmark` — runs every task in `benchmarkTasks.ts` against `process.argv[2] ?? '.'` and prints the report |
+
+Satisfies Phase 11's exit criteria directly: `npm run benchmark` is an actual, repeatable
+"agent alone vs. agent+ECC" comparison run (not just a defined framework), against a real
+codebase, with the metrics from [[07-evaluation]] (recall, irrelevant-evidence rate,
+provenance completeness, tokens) measured and recorded there. See [[04-decisions]] #17 for why
+"agent alone" is a simulated naive-agent baseline (deterministic, offline, no live LLM call)
+rather than a real second agent, and why `src/core/evaluation/` avoids importing `runContext`
+from `src/cli/` to keep core independent of any surface, per [[02-architecture]].
+
+**Measured result** (averaged across the three real-repo tasks, full breakdown in
+[[07-evaluation]]): evidence recall 67% → 100%, provenance completeness 0% → 100%, estimated
+tokens 2833 → 1053, comparing agent-alone to agent+ECC. Irrelevant-evidence rate went the
+other way (72% → 87%) because ECC's supplementary git/test evidence counts as "irrelevant"
+against each task's narrow ground-truth list — reported honestly, not tuned away.
+
+Tested with: pure unit tests for `computeConditionMetrics` (exact-match, partial-match,
+empty-ground-truth, de-duplication cases); `retrieveBaselineEvidence` against the fixture
+repo (keyword match, no-match, budget cutoff); `runEvaluation` against the fixture repo,
+asserting the one guarantee that holds regardless of this project's growing git history
+(provenance completeness 0 vs. 1) rather than brittle exact token/item counts; a unit test
+for `formatReport`'s output shape. 123/123 tests passing overall (31 test files, up from
+113/27), 0 lint/typecheck errors, 0 npm audit vulnerabilities, **no new runtime dependency**.
+New files ≤65 lines.
+
 ## Explicitly NOT built yet (do not assume these exist)
 
 - Conflict detection is structural only (same subject, differing `trustLevel`) — there is no
@@ -339,8 +378,16 @@ vulnerabilities. New runtime dependency: `@modelcontextprotocol/sdk`. New files 
 - Task classification is single-label and keyword/regex-based only — no multi-label
   output, no ML/embedding-based classification, no request normalization beyond
   lowercasing (e.g. no typo correction).
+- The Phase 11 "agent alone" baseline is a **simulated** naive-agent heuristic (keyword grep,
+  whole-file reads), not a real second AI agent or a live LLM call — deliberately, to keep
+  the comparison deterministic/offline/CI-safe (see [[04-decisions]] #17). Real agent-in-the-
+  loop evaluation (spinning up an actual coding agent with/without ECC and comparing task
+  outcomes) is a possible future extension, not built.
+- The benchmark suite has exactly three tasks, all against this one repository — no unseen-
+  repo, temporal-holdout, adversarial, or cross-language coverage yet (see [[07-evaluation]]'s
+  "Benchmark" section for what's still open).
 
 ## Next module to build
 
-Phase 11 (Evaluation + Benchmarking) — see [[05-roadmap]] for exit criteria — is the next
-gated phase. Not started.
+Phase 12 (VS Code Extension) — see [[05-roadmap]] for exit criteria — is the next gated
+phase. Not started.
