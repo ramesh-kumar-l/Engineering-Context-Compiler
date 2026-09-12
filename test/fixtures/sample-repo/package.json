@@ -1,0 +1,5 @@
+{
+  "name": "sample-repo",
+  "private": true,
+  "description": "Static fixture repo used to test RepositoryAnalyzer — never installed or run."
+}

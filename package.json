@@ -15,6 +15,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "typescript": "^5.7.3",
     "zod": "^3.24.1"
   },
   "devDependencies": {
@@ -22,7 +23,6 @@
     "@typescript-eslint/eslint-plugin": "^8.19.1",
     "@typescript-eslint/parser": "^8.19.1",
     "eslint": "^9.18.0",
-    "typescript": "^5.7.3",
     "vitest": "^5.0.0"
   }
 }

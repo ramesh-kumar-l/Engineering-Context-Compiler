@@ -1,3 +1,4 @@
 export * from './types/index.js'
 export * from './schema/index.js'
 export * from './contextPackage.js'
+export * from './repository/index.js'

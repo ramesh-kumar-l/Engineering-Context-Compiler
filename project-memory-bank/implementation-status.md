@@ -4,7 +4,7 @@ name: implementation-status
 
 # Implementation Status
 
-_Last updated: 2026-09-12 (Phase 1)_
+_Last updated: 2026-09-12 (Phase 2)_
 
 Update this file at the end of every major feature — it is the compressed "what actually
 exists" record so future tasks don't have to re-derive it by reading source.
@@ -16,7 +16,10 @@ exists" record so future tasks don't have to re-derive it by reading source.
   VS Code extension (Phase 12) must be TypeScript regardless; `npx`-based zero-install
   distribution matches the CLI-first strategy in the master prompt. Consolidating on one
   language across CLI + MCP + VS Code avoids polyglot maintenance overhead.
-- **Runtime schema validation**: `zod` (only non-dev dependency so far).
+- **Runtime schema validation**: `zod`.
+- **AST parsing**: `typescript` compiler API, syntactic-only (no `Program`/type checker) —
+  used to resolve top-level symbols and import specifiers. Moved from devDependency to
+  dependency in Phase 2 since it's now used at runtime, not just for `tsc`.
 - **Test runner**: `vitest`. **Typecheck**: `tsc --noEmit`. **Lint**: `eslint` (flat
   config, typescript-eslint recommended rules).
 - **CI**: `.github/workflows/ci.yml` runs typecheck + lint + test on push/PR to `main`.
@@ -24,19 +27,22 @@ exists" record so future tasks don't have to re-derive it by reading source.
 ## Modularity convention
 
 Every file is kept well under 300 lines, one concern per file, so future tasks (agent or
-human) can read only the specific module they need. Current largest file is 90 lines
-(the test file). Directory shape:
+human) can read only the specific module they need. Current largest file is 101 lines
+(`dependencyAnalyzer.ts`). Directory shape:
 
 ```
 src/
   core/
-    types/            # pure TS interfaces: task, evidence, trust, contextPackage
-    schema/            # zod schema + validateContextPackage()
-    contextPackage.ts  # createEmptyContextPackage() factory
-    index.ts           # barrel
-  index.ts             # package public entry
+    types/               # pure TS interfaces: task, evidence, trust, contextPackage
+    schema/               # zod schema + validateContextPackage()
+    contextPackage.ts     # createEmptyContextPackage() factory
+    repository/           # Phase 2: repo analysis (see table below)
+    index.ts              # barrel
+  index.ts                # package public entry
 test/
   core/contextPackage.test.ts
+  repository/              # unit tests per module
+  fixtures/sample-repo/    # static fixture dir analyzed end-to-end by repositoryAnalyzer.test.ts
 ```
 
 ## Implemented (Phase 1 — ECC Foundation)
@@ -56,17 +62,42 @@ output; rejects out-of-range relevance, unknown task type enum values, and non-o
 input without throwing. 5/5 tests passing, 0 lint errors, 0 typecheck errors, 0 npm audit
 vulnerabilities.
 
+## Implemented (Phase 2 — Repository Intelligence)
+
+| Module | Path | What it does |
+|---|---|---|
+| Types | `src/core/repository/types.ts` | `FileCategory`, `Language`, `ResolvedSymbol`, `DependencyEdge`, `RepositoryAnalysis`, etc. |
+| File classifier | `src/core/repository/fileClassifier.ts` | `classifyFile()` (source/test/config/documentation/build/other) + `detectLanguage()`; `EXCLUDED_DIRS` (node_modules, .git, dist, build, coverage, ...) |
+| Walker | `src/core/repository/walker.ts` | `walkRepository(rootDir)` — recursive fs walk skipping excluded dirs, returns posix-relative paths |
+| Symbol resolver | `src/core/repository/symbolResolver.ts` | `resolveSymbols(path, source)` — TypeScript-compiler-API (syntactic only) extraction of top-level function/class/interface/type/enum/const declarations, with exported flag + line number |
+| Dependency analyzer | `src/core/repository/dependencyAnalyzer.ts` | `extractImports()` (static import/export-from + `require`/dynamic `import()`), `resolveImportSpecifier()` (resolves relative specifiers incl. TS-ESM `.js`→`.ts` mapping and directory `/index`), `buildDependencyGraph()` |
+| Orchestrator | `src/core/repository/repositoryAnalyzer.ts` | `analyzeRepository(rootDir)` — walk → classify → resolve symbols for source files → build dependency graph → `RepositoryAnalysis` |
+
+Supports TypeScript/JavaScript (one language family, per no-gold-plating — see
+[[04-decisions]] #7). Analysis is **syntactic only**: no full type checker/program, no
+cross-package resolution beyond relative imports — sufficient for "what exists and how does
+it connect", not semantic analysis (that's a later-phase concern if ever needed).
+
+Tested against `test/fixtures/sample-repo/` (a static 3-file TS package with a test file, a
+`package.json`, and a `README.md`) plus focused unit tests per module. 27/27 tests passing
+(5 test files), 0 lint errors, 0 typecheck errors, 0 npm audit vulnerabilities. All new
+files 101 lines or fewer.
+
 ## Explicitly NOT built yet (do not assume these exist)
 
-- No repository analysis, retrieval, ranking, or compression logic (Phases 2, 4, 5, 6).
-- No CLI entry point / `bin` (Phase 8) — deliberately deferred; Phase 1 is types + schema
-  only, no invocable surface yet.
+- No task classification, evidence retrieval, ranking, or compression logic (Phases 3-6).
+- No CLI entry point / `bin` (Phase 8) — deliberately deferred; no invocable surface yet.
 - No skill or MCP server (Phases 9-10).
 - No build/bundle step (`tsc` is `noEmit`-only for now) — will be added when the CLI
   phase needs an executable artifact.
 - No persistence/memory engine beyond the markdown files in this directory.
+- Repository analysis has no caching/incremental re-analysis — full walk every call; fine
+  at current scale, revisit only if a real repo makes it a measured bottleneck.
+- Symbol resolution does not follow re-exports (`export * from './x.js'`) to attribute
+  symbols to their original declaring file — each file's symbols are its own top-level
+  declarations only.
 
 ## Next module to build
 
-Phase 2 (Repository Intelligence) — see [[05-roadmap]] for exit criteria — is the next
-gated phase. It will need a `RepositoryAnalyzer`/`FileClassifier` module, not yet started.
+Phase 3 (Task Understanding) — see [[05-roadmap]] for exit criteria — is the next gated
+phase. Not started.

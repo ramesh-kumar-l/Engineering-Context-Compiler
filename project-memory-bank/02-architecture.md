@@ -1,8 +1,9 @@
 # 02 — Architecture (Target — NOT YET IMPLEMENTED)
 
-Status: **design target only**. Nothing in this file exists in code yet (repo is
-greenfield as of Phase 0 — see [[implementation-status]]). Recorded here so future phases don't
-re-derive it and so implementation stays aligned with the governing spec.
+Status: **design target**, partially implemented — see [[implementation-status]] for what
+actually exists (Phase 1: core types/schema; Phase 2: repository analysis). Recorded here
+so future phases don't re-derive the target shape and implementation stays aligned with
+the governing spec.
 
 ## Target shape
 
@@ -32,10 +33,12 @@ Core must stay independent of any specific UI or agent integration.
 
 ## Candidate components (implement only as each phase requires — do not build all at once)
 
-`TaskClassifier, TaskNormalizer, RepositoryAnalyzer, FileClassifier, SymbolResolver,
-DependencyAnalyzer, EvidenceRetriever, GitHistoryAnalyzer, ContextRanker, ContextSelector,
+`TaskClassifier, TaskNormalizer, RepositoryAnalyzer ✅, FileClassifier ✅, SymbolResolver ✅,
+DependencyAnalyzer ✅, EvidenceRetriever, GitHistoryAnalyzer, ContextRanker, ContextSelector,
 ContextCompressor, TokenBudgetManager, ProvenanceEngine, TrustEngine, VerificationPlanner,
 ContextPackageBuilder, EvaluationEngine, MemoryEngine, AgentAdapter`
+
+✅ = implemented (Phase 2), in `src/core/repository/`. All others: not started.
 
 ## EngineeringContextPackage (draft schema)
 

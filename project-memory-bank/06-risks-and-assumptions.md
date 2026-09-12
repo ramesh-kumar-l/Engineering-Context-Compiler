@@ -28,6 +28,7 @@
 
 - ~~What language/runtime should ECC itself be built in?~~ Resolved: TypeScript/Node
   (see [[04-decisions]] #5).
-- Is there a specific target repository or task type to design the first vertical slice
-  (Phase 2 Repository Intelligence) against, or should it stay language-agnostic /
-  fixture-based initially?
+- ~~Is there a specific target repository or task type to design the first vertical slice
+  (Phase 2 Repository Intelligence) against?~~ Resolved for Phase 2: built fixture-based,
+  TS/JS-only (see [[04-decisions]] #7). Still open for Phase 4+ (Evidence Retrieval) —
+  retrieval quality is hard to judge without a real repo/task pair.
