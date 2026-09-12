@@ -3,8 +3,9 @@
 Status: **design target**, partially implemented — see [[implementation-status]] for what
 actually exists (Phase 1: core types/schema; Phase 2: repository analysis; Phase 3: task
 classification; Phase 4: evidence retrieval; Phase 5: evidence ranking; Phase 6: context
-compilation; Phase 7: trust + provenance; Phase 8: CLI). Recorded here so future phases don't
-re-derive the target shape and implementation stays aligned with the governing spec.
+compilation; Phase 7: trust + provenance; Phase 8: CLI; Phase 9: skill integration).
+Recorded here so future phases don't re-derive the target shape and implementation stays
+aligned with the governing spec.
 
 ## Target shape
 
@@ -56,8 +57,16 @@ surface over the core: `ecc context "<task>"` (`src/cli/cli.ts` → `runContext.
 same `analyzeRepository` → `classifyTask` → `retrieveEvidence` → `rankEvidence` →
 `compileContext` pipeline above, adds a `RepositoryRef` (`repositoryRef.ts`, the missing
 `{name, commit}` piece core alone can't produce), and prints/writes the resulting
-`EngineeringContextPackage`. Phase 9 (Skill) and Phase 10 (MCP) are meant to be similarly
-thin wrappers over `runContext`, not reimplementations of it.
+`EngineeringContextPackage`. Phase 10 (MCP) is meant to be a similarly thin wrapper over
+`runContext`, not a reimplementation of it.
+
+The **Skill** (Phase 9, `skills/ecc-context/SKILL.md`) is thinner still — it wraps the CLI,
+not core: it is pure instructions (frontmatter + markdown) telling an agent when to run
+`ecc context "<task>"` and how to read the printed `EngineeringContextPackage`, with no
+executable code of its own and no direct call into `runContext`. It is scoped to stay a
+disjoint concern from any planning/coding/review skill an agent already has — "when/how to
+call ECC" only, never "how to engineer" — so it composes with rather than duplicates
+existing engineering-methodology skills, per its Phase 9 exit criteria.
 
 ## EngineeringContextPackage (draft schema)
 

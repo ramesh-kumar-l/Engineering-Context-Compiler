@@ -14,7 +14,7 @@ blanket authorization** — each phase requires its own explicit go-ahead (Rule 
 | 6 | Context Compilation | ✅ Complete | Ranked evidence is selected + compressed into a valid `EngineeringContextPackage` within a token budget, with `excluded` reasons populated. |
 | 7 | Trust + Provenance | ✅ Complete | Every included item carries provenance; FACT/DERIVED/INFERENCE/UNKNOWN is never blurred; conflicting evidence is surfaced, not silently resolved. |
 | 8 | CLI | ✅ Complete | `ecc context "<task>"` runs end-to-end against a real repo and prints/saves a valid context package; documented usage. |
-| 9 | Skill Integration | Not started | A Claude skill exists that teaches an agent when/how to invoke ECC, without duplicating existing engineering-methodology skills. |
+| 9 | Skill Integration | ✅ Complete | A Claude skill exists that teaches an agent when/how to invoke ECC, without duplicating existing engineering-methodology skills. |
 | 10 | MCP | Not started | `compile_engineering_context` exposed as an MCP tool; a real MCP client can call it and get a valid package back. |
 | 11 | Evaluation + Benchmarking | Not started | At least one "agent alone vs. agent+ECC" comparison run, with the metrics in [[07-evaluation]] measured, not just defined. |
 | 12 | VS Code Extension | Not started | Right-click "Compile Engineering Context" produces a preview the user can send to an agent; extension is a thin client over CLI/core. |
@@ -25,6 +25,6 @@ blanket authorization** — each phase requires its own explicit go-ahead (Rule 
 
 ## Next recommended phase
 
-**Phase 9 — Skill Integration.** A Claude skill exists that teaches an agent when/how to
-invoke ECC (via the Phase 8 CLI), without duplicating existing engineering-methodology
-skills.
+**Phase 10 — MCP.** Expose `compile_engineering_context` as an MCP tool over the same
+`runContext` orchestrator the Phase 8 CLI and Phase 9 skill point to, so a real MCP client
+can call it and get a valid package back.

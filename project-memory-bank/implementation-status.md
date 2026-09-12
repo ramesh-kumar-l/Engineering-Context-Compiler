@@ -4,7 +4,7 @@ name: implementation-status
 
 # Implementation Status
 
-_Last updated: 2026-09-12 (Phase 8)_
+_Last updated: 2026-09-12 (Phase 9)_
 
 Update this file at the end of every major feature — it is the compressed "what actually
 exists" record so future tasks don't have to re-derive it by reading source.
@@ -47,6 +47,8 @@ src/
     index.ts              # barrel
   cli/                   # Phase 8: ecc CLI (see table below)
   index.ts                # package public entry
+skills/
+  ecc-context/SKILL.md    # Phase 9: agent-facing skill doc (when/how to call the CLI)
 test/
   core/contextPackage.test.ts
   repository/              # unit tests per module
@@ -55,6 +57,7 @@ test/
   compilation/              # unit + fixture-repo integration tests for Phase 6 modules
   trust/                    # unit tests for Phase 7 modules
   cli/                      # unit + fixture-repo integration tests for Phase 8 CLI modules
+  skill/                    # Phase 9: doc-consistency test for skills/ecc-context/SKILL.md
   fixtures/sample-repo/    # static fixture dir analyzed end-to-end by repositoryAnalyzer.test.ts
   fixtures/task-requests.json  # 54 labeled {request, expected TaskType} examples
 ```
@@ -256,13 +259,43 @@ passing overall (24 test files, up from 91/20), 0 lint/typecheck errors, 0 npm a
 vulnerabilities, no new runtime dependency (typescript's own compiler handles the build).
 New/changed files ≤50 lines.
 
+## Implemented (Phase 9 — Skill Integration)
+
+| Module | Path | What it does |
+|---|---|---|
+| Skill doc | `skills/ecc-context/SKILL.md` | Frontmatter (`name`, `description`) + instructions teaching an agent when to call `ecc context "<task>"`, how to invoke it (flags, build prerequisite), and how to read the resulting `EngineeringContextPackage` (primary vs. supporting evidence, `trustLevel`, `conflicts`, `unknowns`/`excluded`) |
+| Doc-consistency test | `test/skill/skillDoc.test.ts` | Asserts the skill file has valid frontmatter, documents the real CLI flags (`--path`/`--out`/`--budget`) and package fields (`context.primary`, `trustLevel`, `conflicts`), and stays under 300 lines — guards against the doc drifting from the actual CLI as it evolves |
+
+The skill is deliberately narrow: it teaches *when/how to invoke ECC and read its output*,
+nothing else. It explicitly tells the agent not to fold planning/coding/review/verification
+guidance into it, so it composes with (rather than duplicates) whatever methodology skills a
+consuming agent already has — directly satisfying Phase 9's exit criteria. It is a thin
+surface over the Phase 8 CLI exactly like Phase 8 was a thin surface over core (see
+[[02-architecture]]); it calls no code and adds no new source module, so there was no
+`runContext`-level integration to build — only documentation for an existing capability plus
+a test that keeps that documentation honest.
+
+Since a `SKILL.md` is an instructions artifact, not executable code, "testing" it means
+doc-consistency rather than behavior: the new test reads the file and checks its documented
+CLI syntax/fields against what Phase 8 actually implemented, so a future CLI change (e.g. a
+renamed flag) fails this test instead of silently going stale. Verified: `npm run typecheck`,
+`npm run lint`, `npm test` (107/107 passing across 25 test files, up from 103/24), `npm run
+build`, `npm audit` all green. New files: `skills/ecc-context/SKILL.md` (~90 lines of
+markdown, not source code so the 300-line code-modularity rule doesn't strictly apply, but
+kept under it anyway per the doc-consistency test) and `test/skill/skillDoc.test.ts` (34
+lines).
+
 ## Explicitly NOT built yet (do not assume these exist)
 
 - Conflict detection is structural only (same subject, differing `trustLevel`) — there is no
   semantic/content diff between two claims about the same file, since no such capability
   exists yet. A `path`+`identifier` collision with the *same* `trustLevel` is not flagged even
   if the underlying claims disagree in content.
-- No skill or MCP server (Phases 9-10) — the CLI is currently the only invocable surface.
+- No MCP server (Phase 10) — the CLI (optionally via the Phase 9 skill doc) is currently the
+  only invocable surface; no agent can call ECC as a tool without shelling out.
+- The Phase 9 skill only documents the CLI — it does not itself invoke `runContext` or ship
+  any code; there is no automatic skill-discovery/install mechanism, a user/agent must copy
+  or symlink `skills/ecc-context/` into their own skills directory.
 - The CLI has exactly one command (`context`) and one output format (pretty JSON) — no
   `--help`/`--version`, no subcommands, no machine-compact output mode.
 - No persistence/memory engine beyond the markdown files in this directory.
@@ -277,5 +310,4 @@ New/changed files ≤50 lines.
 
 ## Next module to build
 
-Phase 9 (Skill Integration) — see [[05-roadmap]] for exit criteria — is the next gated phase.
-Not started.
+Phase 10 (MCP) — see [[05-roadmap]] for exit criteria — is the next gated phase. Not started.

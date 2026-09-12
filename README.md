@@ -4,7 +4,7 @@ The context and evidence layer for AI-native software engineering: converts a me
 engineering task into the smallest, highest-value, evidence-backed context package an AI
 coding agent needs to solve it.
 
-**Status**: Phase 8 of 16 (CLI). No skill or MCP surface yet — see
+**Status**: Phase 9 of 16 (Skill Integration). No MCP surface yet — see
 [`project-memory-bank/implementation-status.md`](project-memory-bank/implementation-status.md)
 for what's built and [`project-memory-bank/05-roadmap.md`](project-memory-bank/05-roadmap.md)
 for the phase plan.
@@ -35,6 +35,15 @@ stdout. Flags:
 - `--path <dir>` — repository to analyze (default: current directory)
 - `--out <file>` — write the package to a file instead of stdout
 - `--budget <n>` — token budget for evidence selection (default: 4000)
+
+## Agent skill
+
+[`skills/ecc-context/SKILL.md`](skills/ecc-context/SKILL.md) teaches an AI coding agent
+when and how to invoke the CLI above and how to read the resulting package (primary vs.
+supporting evidence, trust levels, conflicts, gaps). It is scoped narrowly to "when/how to
+call ECC" so it composes with, rather than duplicates, planning/coding/review skills. To use
+it in an agent session, copy or symlink the `skills/ecc-context/` directory into that
+session's skills directory (e.g. `.claude/skills/ecc-context/` for Claude Code).
 
 ## Project memory
 

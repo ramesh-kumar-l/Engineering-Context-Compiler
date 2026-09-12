@@ -8,77 +8,70 @@ _Last updated: 2026-09-12_
 
 ## Current phase
 
-**Phase 8 — CLI**: Complete.
+**Phase 9 — Skill Integration**: Complete.
 
 ## What just happened
 
-Built `src/cli/` (six small, single-purpose modules, same orchestrator pattern as every prior
-phase):
+Added `skills/ecc-context/SKILL.md`: a Claude Code skill (YAML frontmatter `name`/
+`description` + markdown body) teaching an agent:
 
-1. `repositoryRef.ts` — `resolveRepositoryRef(rootDir)`: folder name + `git rev-parse HEAD`,
-   falling back to commit `"unknown"` for a non-git directory (never throws, same tolerance
-   as `gitEvidenceRetriever.ts` from Phase 4).
-2. `runContext.ts` — `runContext(repoPath, request, options?)`: the single end-to-end pipeline
-   call — `analyzeRepository` -> `classifyTask` -> `retrieveEvidence` -> `rankEvidence` ->
-   `compileContext`. This is the one orchestration point every current and future surface
-   (CLI now, skill/MCP in Phases 9-10) should call into.
-3. `argv.ts` — `parseArgs(argv)`: hand-rolled parser for `context "<task>" [--path] [--out]
-   [--budget]`, no dependency.
-4. `output.ts` — `formatPackage(pkg)` / `writePackage(pkg, path)`: pretty-JSON stdout or file
-   output.
-5. `cli.ts` — `runCli(argv)`: wires argv -> `runContext` -> `validateContextPackage` ->
-   print/write; returns an exit code instead of calling `process.exit`, so it's testable
-   without spawning a subprocess.
-6. `index.ts` — the actual `bin` entry: a shebang (`#!/usr/bin/env node`) plus a two-line call
-   into `runCli`.
+1. **When to use it** — before a non-trivial engineering task in a real repo, instead of
+   guessing at relevant files/history.
+2. **When not to** — trivial local edits, no target repo, or (explicitly) as a substitute
+   for planning/coding/review/verification skills. This boundary is what keeps the skill
+   from duplicating existing engineering-methodology skills, per Phase 9's exit criteria.
+3. **How to invoke it** — `node dist/cli/index.js context "<task>" [--path] [--out]
+   [--budget]` (or `ecc context ...` once installed with its `bin` on `PATH`), after a one-
+   time `npm run build`.
+4. **How to read the output** — `context.primary`/`supporting`, `trustLevel` per item
+   (`fact`/`derived`/`inference`/`unknown`), `conflicts` (never silently pick a side),
+   `unknowns`/`excluded` (known gaps, not "nothing else exists"), `verification` (a hint,
+   not a replacement for the agent's own checks).
+5. **Failure modes** — non-git repos, tight `--budget` excluding evidence, low-confidence
+   task classification.
 
-Also added the build tooling this phase needed but Phase 1 deliberately deferred (Decision
-#6): `tsconfig.build.json` (extends the base config, `noEmit: false`, `outDir: dist`), a
-`build` npm script, `package.json`'s new `bin.ecc -> ./dist/cli/index.js`, and a `build` step
-in CI (`.github/workflows/ci.yml`) so a build-breaking change fails the same way a
-test-breaking one does. `tsconfig.json` itself stays `noEmit` so `npm run typecheck` remains
-fast. `vitest.config.ts` gained `testTimeout: 15000` after a process-spawning git test timed
-out under parallel load in the full suite (passed instantly in isolation) — cold-process
-spawn overhead under load, not a code defect; see [[04-decisions]] #14 for the full build/
-testing rationale.
+The skill has **no executable code** — it's pure instructions wrapping the Phase 8 CLI, one
+layer thinner than the CLI's own wrap of core (see [[02-architecture]] and [[04-decisions]]
+#15 for why: it's a documentation artifact, not a new callable surface). It lives in a repo-
+root `skills/` directory (not `.claude/skills/`) since its audience is agents working in
+*other* repositories that install this package, not this repo's own session.
 
-This directly satisfies Phase 8's exit criteria: `ecc context "<task>"` runs the full
-pipeline against a real repository and prints a schema-valid `EngineeringContextPackage` to
-stdout (or writes it via `--out <file>`). Manually verified against the built
-`dist/cli/index.js` (not just the unit-tested source): ran `node dist/cli/index.js context
-"explain the utils module" --path test/fixtures/sample-repo` and confirmed the shebang
-survived compilation and the printed JSON is schema-valid with `provenance`/`trustLevel` on
-every item; also verified `--out`, the unknown-command error path, and the missing-task-
-description error path.
+Added `test/skill/skillDoc.test.ts` — a doc-consistency test (not a behavioral one, since
+there's no code to exercise): asserts the skill file has valid frontmatter, documents the
+real CLI flags (`--path`/`--out`/`--budget`) and package fields (`context.primary`,
+`trustLevel`, `conflicts`), and stays under 300 lines. This guards against the doc silently
+drifting from the CLI as Phase 8's surface evolves.
 
-Tested via `runCli`/`runContext` directly (no subprocess spawn - consistent with every other
-integration test in this repo, and exercises the identical code path the shebang entry
-calls): unknown-command and missing-task error paths; full fixture-repo pipeline produces a
-package that passes `validateContextPackage`; task type/request/repository name flow through
-unchanged; a tiny `--budget` produces a non-empty `excluded`; `resolveRepositoryRef` against
-a real temp git repo (regex-matched 40-hex commit) and a non-git directory (`"unknown"`).
-Verified: `npm run typecheck`, `npm run lint`, `npm test` (103/103 passing across 24 test
-files, up from 91/20), `npm run build` (clean compile, shebang preserved), `npm audit` (0
-vulnerabilities) all green. New/changed source files ≤50 lines. No new runtime dependency.
-README updated with CLI usage instructions.
+Updated `README.md` with an "## Agent skill" section (what it is, how to install it into an
+agent's skills directory) and bumped the status line to Phase 9.
+
+This directly satisfies Phase 9's exit criteria: the skill teaches an agent when/how to
+invoke ECC (via the existing CLI), and its explicit "when NOT to use" section is the
+mechanism that keeps it from duplicating existing engineering-methodology skills rather than
+composing with them.
+
+Verified: `npm run typecheck`, `npm run lint`, `npm test` (107/107 passing across 25 test
+files, up from 103/24), `npm run build`, `npm audit` (0 vulnerabilities) all green. New
+files: `skills/ecc-context/SKILL.md` (~90 lines) and `test/skill/skillDoc.test.ts` (34
+lines). No new runtime dependency, no changes to any `src/` module.
 
 ## In progress
 
-Nothing - Phase 8 closed out cleanly. Awaiting user authorization to plan Phase 9.
+Nothing — Phase 9 closed out cleanly. Awaiting user authorization to plan Phase 10.
 
 ## Next task
 
-Per [[05-roadmap]], the next gated phase is **Phase 9 — Skill Integration**: a Claude skill
-that teaches an agent when/how to invoke ECC (via the Phase 8 CLI / `runContext`), without
-duplicating existing engineering-methodology skills. Requires explicit authorization before
-planning/implementation begins (Rule 3).
+Per [[05-roadmap]], the next gated phase is **Phase 10 — MCP**: expose
+`compile_engineering_context` as an MCP tool over the same `runContext` orchestrator the CLI
+and skill point to, so a real MCP client can call it and get a valid package back. Requires
+explicit authorization before planning/implementation begins (Rule 3).
 
 ## Open questions carried forward
 
 - No target repository/task type has been chosen by the user to validate compilation against
   beyond fixtures. The CLI can now be pointed at any real repo to check this - worth doing
-  before Phase 9/10 build agent-facing surfaces on top of it, since token-budget defaults and
-  trust classifications are easier to tune against real evidence volumes than a small fixture.
+  before Phase 10's MCP surface builds on top of it, since token-budget defaults and trust
+  classifications are easier to tune against real evidence volumes than a small fixture.
 - `SOURCE_AUTHORITY_WEIGHT` (Phase 5), `DEFAULT_TOKEN_BUDGET`/`MAX_SYMBOLS_PER_ITEM` (Phase 6)
   remain hand-picked static values, unchanged this phase - still worth revisiting once
   Phase 11's evaluation exists.
@@ -88,10 +81,15 @@ planning/implementation begins (Rule 3).
   not user-configurable yet. Revisit alongside Phase 11's evaluation and Phase 14 (Engineering
   Memory), per the same note as last phase.
 - The CLI has exactly one command (`context`) and one output format (pretty JSON) - no
-  `--help`/`--version`, no subcommands. Sufficient for Phase 8's exit criteria; revisit only
-  if Phase 9/10 usage reveals a real need (e.g. a `--format compact` for token-constrained
-  agent contexts).
-- `vitest.config.ts`'s new `testTimeout: 15000` is a blunt fix for occasional slow
+  `--help`/`--version`, no subcommands. Unchanged this phase; revisit only if Phase 10's MCP
+  usage reveals a real need.
+- `vitest.config.ts`'s `testTimeout: 15000` (Phase 8) is a blunt fix for occasional slow
   process-spawning tests under parallel load on this machine; if flakiness persists on a
   different CI runner, the more targeted fix is a per-test timeout override on just the
   git-spawning tests rather than raising the global default further.
+- The Phase 9 skill has no automated install step (a user/agent manually copies or symlinks
+  `skills/ecc-context/` into their skills directory) - fine at current scale (one skill, one
+  package); revisit only if distribution friction becomes a measured problem.
+- Once Phase 10's MCP tool exists, `skills/ecc-context/SKILL.md` should be revisited to
+  mention it as an alternative invocation path (MCP tool call vs. shelling out to the CLI),
+  so the skill doesn't become stale by omission.
