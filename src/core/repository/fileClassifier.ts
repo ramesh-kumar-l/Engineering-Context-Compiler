@@ -4,6 +4,7 @@ import type { FileCategory, Language } from './types.js';
 export const EXCLUDED_DIRS = new Set([
   'node_modules',
   '.git',
+  '.ecc',
   'dist',
   'build',
   'coverage',

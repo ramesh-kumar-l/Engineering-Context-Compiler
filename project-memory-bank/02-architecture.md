@@ -5,7 +5,7 @@ actually exists (Phase 1: core types/schema; Phase 2: repository analysis; Phase
 classification; Phase 4: evidence retrieval; Phase 5: evidence ranking; Phase 6: context
 compilation; Phase 7: trust + provenance; Phase 8: CLI; Phase 9: skill integration; Phase 10:
 MCP; Phase 11: evaluation + benchmarking; Phase 12: VS Code extension; Phase 13: GitHub/CI
-integration).
+integration; Phase 14: engineering memory).
 Recorded here so future phases don't re-derive the target shape and implementation stays
 aligned with the governing spec.
 
@@ -40,7 +40,7 @@ Core must stay independent of any specific UI or agent integration.
 `TaskClassifier ✅, TaskNormalizer, RepositoryAnalyzer ✅, FileClassifier ✅, SymbolResolver ✅,
 DependencyAnalyzer ✅, EvidenceRetriever ✅, GitHistoryAnalyzer ✅, ContextRanker ✅, ContextSelector ✅,
 ContextCompressor ✅, TokenBudgetManager ✅, ProvenanceEngine ✅, TrustEngine ✅, VerificationPlanner,
-ContextPackageBuilder ✅, EvaluationEngine ✅, MemoryEngine, AgentAdapter`
+ContextPackageBuilder ✅, EvaluationEngine ✅, MemoryEngine ✅, AgentAdapter`
 
 ✅ = implemented: repository analysis (Phase 2, `src/core/repository/`), task classification
 (Phase 3, `src/core/task/`), evidence retrieval incl. git history (Phase 4,
@@ -51,8 +51,10 @@ selection with exclusion tracking (`contextSelector.ts`), and the `compileContex
 orchestrator (`contextCompiler.ts`, the `ContextPackageBuilder`); trust + provenance (Phase 7,
 `src/core/trust/`) — guaranteed provenance reconstruction (`provenanceGuard.ts`, the
 `ProvenanceEngine`), per-source-type trust classification (`trustClassifier.ts`, the
-`TrustEngine`), and structural conflict surfacing (`conflictDetector.ts`). All others: not
-started.
+`TrustEngine`), and structural conflict surfacing (`conflictDetector.ts`); engineering memory
+(Phase 14, `src/core/memory/`) — a per-repository JSON store (`memoryStore.ts`, the
+`MemoryEngine`) and a keyword-overlap retriever (`memoryRetriever.ts`) that turns persisted
+decisions/incidents/outcomes into ordinary `EvidenceItem`s. All others: not started.
 
 The **CLI** (Phase 8, `src/cli/`) is not itself a candidate component — it's the first thin
 surface over the core: `ecc context "<task>"` (`src/cli/cli.ts` → `runContext.ts`) calls the
@@ -116,6 +118,23 @@ GitHub REST API, no `@octokit`/`@actions` dependency). A hidden HTML-comment mar
 runs on the same PR replace their own prior comment instead of accumulating duplicates.
 `.github/workflows/pr-context.yml` runs it on `pull_request` (`opened`/`synchronize`/
 `reopened`) using the workflow's own ambient `GITHUB_TOKEN`. See [[04-decisions]] #19.
+
+**Engineering memory** (Phase 14, `src/core/memory/`) is the first genuinely new core
+component since Phase 11 - not a surface, a capability every surface already gains for free.
+`memoryStore.ts` persists `MemoryEntry` records (`decision`/`incident`/`outcome`) to
+`<repoRoot>/.ecc/memory.json`, synchronously (matching `retrieveEvidence`'s existing sync
+chain - `gitEvidenceRetriever.ts` already shells out to `git` synchronously for the same
+reason). `memoryRetriever.ts` scores stored entries against a task's keywords with the same
+heuristic `codeEvidenceRetriever.ts` uses, emitting ordinary `EvidenceItem`s with
+`source: 'memory'` - a source type `EVIDENCE_SOURCE_TYPES`/`SOURCE_AUTHORITY_WEIGHT`/
+`classifyTrust` already had rules for since Phase 5/7 (`inference` trust, 0.45 authority), so
+no ranking/trust/selection code changed. `evidenceRetriever.ts`'s orchestrator now loads and
+scores memory alongside code/test/git; `fileClassifier.ts`'s `EXCLUDED_DIRS` gained `.ecc` so
+the store itself is never walked as a candidate file. The only new write surface is a CLI
+command, `ecc memory --type <decision|incident|outcome> --summary "..."`
+(`src/cli/memoryCommand.ts`), since proving the exit criteria needs exactly one way to record
+an entry - MCP/VS Code/GitHub can add their own later without touching `src/core/memory/` at
+all. See [[04-decisions]] #20.
 
 ## EngineeringContextPackage (draft schema)
 

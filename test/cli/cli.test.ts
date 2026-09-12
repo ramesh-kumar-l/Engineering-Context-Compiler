@@ -1,6 +1,10 @@
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { runCli } from '../../src/cli/cli.js'
+import { loadMemoryEntries } from '../../src/core/memory/memoryStore.js'
 
 const FIXTURE_ROOT = fileURLToPath(new URL('../fixtures/sample-repo', import.meta.url))
 
@@ -39,5 +43,28 @@ describe('runCli', () => {
 
     expect(exitCode).toBe(1)
     expect(errorSpy).toHaveBeenCalled()
+  })
+
+  it('records a memory entry via the memory command', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const repoRoot = mkdtempSync(join(tmpdir(), 'ecc-cli-memory-'))
+
+    try {
+      const exitCode = await runCli([
+        'memory',
+        '--type',
+        'decision',
+        '--summary',
+        'recorded via cli.test.ts',
+        '--path',
+        repoRoot,
+      ])
+
+      expect(exitCode).toBe(0)
+      expect(logSpy).toHaveBeenCalledTimes(1)
+      expect(loadMemoryEntries(repoRoot)).toHaveLength(1)
+    } finally {
+      rmSync(repoRoot, { recursive: true, force: true })
+    }
   })
 })

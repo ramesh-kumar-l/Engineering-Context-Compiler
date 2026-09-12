@@ -84,6 +84,22 @@ Every item under `context.primary`/`context.supporting` carries a `trustLevel`:
 `inference` (a plausible but unconfirmed guess), or `unknown` (no verifiable source). Weight
 your confidence accordingly — do not treat an `inference` item as if it were a `fact`.
 
+## Recording memory (decisions/incidents/outcomes)
+
+ECC also persists engineering memory per repository, so a decision/incident/outcome from this
+session becomes retrievable evidence (`source: 'memory'`, `trustLevel: 'inference'`) in a
+later `context` call against the same repo:
+
+```bash
+node dist/cli/index.js memory --type decision --summary "<short statement>" \
+  [--detail "<longer explanation>"] [--tags a,b] [--paths src/x.ts,src/y.ts] [--path <repo-dir>]
+```
+
+`--type` is one of `decision` / `incident` / `outcome`. Record something here when you make a
+non-obvious call the next session on this repo would benefit from knowing about (e.g. "chose
+X over Y because Z", "incident: this endpoint failed under load because W", "outcome:
+refactor of A reduced B") — not every routine change.
+
 ## Failure modes to expect
 
 - A repository with no git history still returns code/test evidence; only

@@ -40,4 +40,48 @@ describe('parseArgs', () => {
       args: { request: 'explain it', path: '.', out: undefined, budget: undefined },
     })
   })
+
+  it('parses a memory command with all flags, splitting --tags and --paths on commas', () => {
+    const parsed = parseArgs([
+      'memory',
+      '--type',
+      'decision',
+      '--summary',
+      'use fetch',
+      '--detail',
+      'no SDK needed',
+      '--tags',
+      'api, github',
+      '--paths',
+      'src/a.ts,src/b.ts',
+      '--path',
+      '/repo',
+    ])
+    expect(parsed).toEqual({
+      command: 'memory',
+      args: {
+        type: 'decision',
+        summary: 'use fetch',
+        detail: 'no SDK needed',
+        tags: ['api', 'github'],
+        relatedPaths: ['src/a.ts', 'src/b.ts'],
+        path: '/repo',
+      },
+    })
+  })
+
+  it('parses a bare memory command with the default path and undefined optional fields', () => {
+    const parsed = parseArgs(['memory', '--type', 'incident', '--summary', 'it broke'])
+    expect(parsed).toEqual({
+      command: 'memory',
+      args: {
+        type: 'incident',
+        summary: 'it broke',
+        detail: undefined,
+        tags: undefined,
+        relatedPaths: undefined,
+        path: '.',
+      },
+    })
+  })
 })

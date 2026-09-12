@@ -4,7 +4,7 @@ The context and evidence layer for AI-native software engineering: converts a me
 engineering task into the smallest, highest-value, evidence-backed context package an AI
 coding agent needs to solve it.
 
-**Status**: Phase 13 of 16 (GitHub / CI Integrations). See
+**Status**: Phase 14 of 16 (Engineering Memory). See
 [`project-memory-bank/implementation-status.md`](project-memory-bank/implementation-status.md)
 for what's built and [`project-memory-bank/05-roadmap.md`](project-memory-bank/05-roadmap.md)
 for the phase plan.
@@ -35,6 +35,19 @@ stdout. Flags:
 - `--path <dir>` — repository to analyze (default: current directory)
 - `--out <file>` — write the package to a file instead of stdout
 - `--budget <n>` — token budget for evidence selection (default: 4000)
+
+Record a decision/incident/outcome so a later `context` call against the same repository can
+retrieve it as evidence:
+
+```bash
+node dist/cli/index.js memory --type decision --summary "Chose fetch over an SDK" \
+  [--detail "..."] [--tags a,b] [--paths src/x.ts,src/y.ts] [--path ./my-repo]
+```
+
+`--type` is one of `decision` / `incident` / `outcome`. Entries persist to
+`<repo>/.ecc/memory.json` and are retrieved as ordinary evidence
+(`source: 'memory'`, `trustLevel: 'inference'`) by any surface (CLI/MCP/VS Code/GitHub) that
+later runs `context` against that repository.
 
 ## MCP usage
 

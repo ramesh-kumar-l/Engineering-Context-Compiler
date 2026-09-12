@@ -1,9 +1,12 @@
 import { parseArgs } from './argv.js'
 import { runContext } from './runContext.js'
+import { runMemoryCommand, MEMORY_USAGE } from './memoryCommand.js'
 import { formatPackage, writePackage } from './output.js'
 import { validateContextPackage } from '../core/schema/validate.js'
 
-export const USAGE = 'Usage: ecc context "<task description>" [--path <dir>] [--out <file>] [--budget <n>]'
+export const USAGE =
+  `Usage: ecc context "<task description>" [--path <dir>] [--out <file>] [--budget <n>]\n` +
+  `       ${MEMORY_USAGE}`
 
 /**
  * Runs the `ecc` CLI for a given argv (excluding the node/script entries) and returns a process
@@ -16,6 +19,10 @@ export async function runCli(argv: string[]): Promise<number> {
   if (parsed.command === 'unknown') {
     console.error(USAGE)
     return 1
+  }
+
+  if (parsed.command === 'memory') {
+    return runMemoryCommand(parsed.args)
   }
 
   const { request, path, out, budget } = parsed.args

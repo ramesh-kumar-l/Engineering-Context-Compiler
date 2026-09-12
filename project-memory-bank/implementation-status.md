@@ -4,7 +4,7 @@ name: implementation-status
 
 # Implementation Status
 
-_Last updated: 2026-09-12 (Phase 13)_
+_Last updated: 2026-09-12 (Phase 14)_
 
 Update this file at the end of every major feature — it is the compressed "what actually
 exists" record so future tasks don't have to re-derive it by reading source.
@@ -36,6 +36,9 @@ exists" record so future tasks don't have to re-derive it by reading source.
   plus a `vscode-extension` job for that sibling package. `.github/workflows/pr-context.yml`
   (Phase 13) posts ECC context on `pull_request` events using only Node 20's built-in `fetch`
   (no `@octokit`/`@actions` dependency) — see [[04-decisions]] #19.
+- **Engineering memory storage**: Phase 14 persists memory as one JSON file per target
+  repository (`<repoRoot>/.ecc/memory.json`), read/written synchronously via plain `node:fs`
+  — no database, no new dependency. See [[04-decisions]] #20.
 
 ## Modularity convention
 
@@ -55,12 +58,15 @@ src/
     compilation/          # Phase 6: context compilation (see table below)
     trust/                # Phase 7: provenance guarantee + trust classification + conflicts
     evaluation/            # Phase 11: agent-alone-vs-agent+ECC metrics engine (see table below)
+    memory/                 # Phase 14: engineering memory store + retriever (see table below)
     index.ts              # barrel
   cli/                   # Phase 8: ecc CLI (see table below)
   mcp/                   # Phase 10: MCP server (see table below)
   benchmark/              # Phase 11: runnable benchmark surface (see table below)
   reporting/              # Phase 13: renderMarkdownReport(pkg) - pure, GitHub-independent
   github/                 # Phase 13: PR context posting surface (see table below)
+  # Note: analyzed target repos get their own <repoRoot>/.ecc/memory.json (Phase 14) -
+  # unrelated to this project's own source tree above.
   index.ts                # package public entry
 skills/
   ecc-context/SKILL.md    # Phase 9: agent-facing skill doc (when/how to call the CLI)
@@ -78,6 +84,7 @@ test/
   benchmark/                # Phase 11: unit test for src/benchmark/report.ts
   reporting/                # Phase 13: unit tests for src/reporting/markdownReport.ts
   github/                   # Phase 13: unit + fixture-repo integration tests for src/github/
+  memory/                   # Phase 14: unit + isolated-temp-repo integration tests for src/core/memory/
   fixtures/sample-repo/    # static fixture dir analyzed end-to-end by repositoryAnalyzer.test.ts
   fixtures/task-requests.json  # 54 labeled {request, expected TaskType} examples
   fixtures/pull-request-event.json  # sample GitHub Actions pull_request event payload
@@ -442,6 +449,48 @@ confirming the posted comment body actually contains the compiled context. 135/1
 passing overall (35 test files, up from 123/31), 0 lint/typecheck errors, 0 npm audit
 vulnerabilities, no new runtime dependency. New files ≤85 lines.
 
+## Implemented (Phase 14 — Engineering Memory)
+
+| Module | Path | What it does |
+|---|---|---|
+| Types | `src/core/memory/types.ts` | `MEMORY_ENTRY_TYPES` (`decision`/`incident`/`outcome`), `MemoryEntry { id, type, summary, detail?, tags?, relatedPaths?, timestamp }` |
+| Store | `src/core/memory/memoryStore.ts` | `loadMemoryEntries(repoRoot)` — reads `<repoRoot>/.ecc/memory.json`, returns `[]` on a missing or corrupt file (never throws); `recordMemoryEntry(repoRoot, input)` — assigns an id/timestamp, appends, and writes the file back (creating `.ecc/` on first use) |
+| Retriever | `src/core/memory/memoryRetriever.ts` | `retrieveMemoryEvidence(task, entries)` — keyword-overlap scoring against each entry's summary/detail/tags/relatedPaths (same heuristic as `codeEvidenceRetriever.ts`), emitting `EvidenceItem`s with `source: 'memory'`; drops zero-overlap entries, floors relevance for a lone weak match |
+| CLI command | `src/cli/memoryCommand.ts` | `runMemoryCommand(args)` — validates `--type`/`--summary`, calls `recordMemoryEntry`, prints confirmation; wired into `src/cli/argv.ts` (`memory` command) and `src/cli/cli.ts` |
+
+`evidenceRetriever.ts`'s orchestrator now also loads and scores memory evidence for the
+target repository, alongside code/test/git — the only change to existing retrieval code is
+one additional call. `fileClassifier.ts`'s `EXCLUDED_DIRS` gained `.ecc` so the store itself
+is never walked as a candidate source file. No `EvidenceItem`/schema/ranking/trust changes
+were needed: `EVIDENCE_SOURCE_TYPES` already included `'memory'`, and Phase 5's
+`SOURCE_AUTHORITY_WEIGHT`/Phase 7's `classifyTrust` already had rules for it (`inference`
+trust, 0.45 authority) — built in anticipation of this phase, unused until now.
+
+Satisfies Phase 14's exit criteria directly: `ecc memory --type decision --summary "..."`
+persists an entry to `<repoRoot>/.ecc/memory.json`; any later `ecc context` call against that
+same repository (or any other surface — MCP/VS Code/GitHub — since they all call the same
+`retrieveEvidence` transitively via `runContext`) retrieves it as evidence if its content
+overlaps the new task's keywords. Verified end-to-end against the **built** `dist/cli/index.js`
+(not just unit tests): recorded an entry, ran a matching `context` request, confirmed the
+entry appeared in `context.supporting` with `source: 'memory'`. See [[04-decisions]] #20 for
+why memory flows through the existing `EvidenceItem` pipeline rather than the schema's
+still-unused `history: HistoricalClaim[]` field, why the store is a flat JSON file (not a
+database), and why the CLI is the only write surface built this phase.
+
+Tested with: unit tests for `memoryStore.ts` (create-on-first-use, unique ids across repeat
+entries, empty result for a missing file, empty result for corrupt/non-array JSON) using
+isolated `mkdtemp` temp directories per test (never this project's own `.ecc/`); unit tests
+for `memoryRetriever.ts` (no-keyword/no-entries/no-overlap → `[]`, keyword-overlap matching
+via summary/detail/tags/relatedPaths, relevance floor, descending-relevance sort); an
+integration test running the real `analyzeRepository` → `retrieveEvidence` chain against an
+isolated temp repo (confirms a recorded entry surfaces as evidence, confirms `.ecc/` is never
+walked as a classified file, confirms no memory evidence when nothing was recorded); unit
+tests for `runMemoryCommand` (valid record, missing/invalid `--type`, missing `--summary`);
+extended `argv.test.ts`/`cli.test.ts` with `memory`-command parsing and end-to-end cases.
+156/156 tests passing overall (39 test files, up from 135/35 — 21 new tests), 0 lint/
+typecheck errors, 0 npm audit vulnerabilities, **no new runtime dependency**. New files ≤62
+lines (`memoryStore.ts`); largest touched file remains 108 lines (`argv.ts`).
+
 ## Explicitly NOT built yet (do not assume these exist)
 
 - Conflict detection is structural only (same subject, differing `trustLevel`) — there is no
@@ -489,8 +538,18 @@ vulnerabilities, no new runtime dependency. New files ≤85 lines.
   There is no status-check/annotation surface (only a PR comment), no per-repo configuration
   (token budget is a fixed env var, not a workflow input), and no CI-integration beyond GitHub
   (no GitLab/Bitbucket equivalent).
+- Phase 14's memory store is per-repository, flat-file, and **retrieval-only beyond keyword
+  overlap** — no update/delete of an existing entry (append-only), no size cap/pruning of
+  `.ecc/memory.json` as it grows, no dedup of near-identical entries, no cross-repository
+  memory sharing, and no exposure via MCP/VS Code/GitHub (CLI is the only write surface so
+  far — see [[04-decisions]] #20). Matching is the same basic keyword-overlap heuristic as
+  Phase 4's code retriever, not embedding/semantic similarity, so a relevant entry phrased
+  very differently from the new task's request can be missed.
+- The schema's `history: HistoricalClaim[]` field remains defined but always empty —
+  Phase 14 deliberately routed memory through the `EvidenceItem` pipeline instead (see
+  [[04-decisions]] #20); nothing populates `history` yet.
 
 ## Next module to build
 
-Phase 14 (Engineering Memory) — see [[05-roadmap]] for exit criteria — is the next gated
-phase. Not started.
+Phase 15 (Verification Intelligence) — see [[05-roadmap]] for exit criteria — is the next
+gated phase. Not started.
