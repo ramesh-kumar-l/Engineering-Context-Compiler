@@ -15,7 +15,7 @@ blanket authorization** — each phase requires its own explicit go-ahead (Rule 
 | 7 | Trust + Provenance | ✅ Complete | Every included item carries provenance; FACT/DERIVED/INFERENCE/UNKNOWN is never blurred; conflicting evidence is surfaced, not silently resolved. |
 | 8 | CLI | ✅ Complete | `ecc context "<task>"` runs end-to-end against a real repo and prints/saves a valid context package; documented usage. |
 | 9 | Skill Integration | ✅ Complete | A Claude skill exists that teaches an agent when/how to invoke ECC, without duplicating existing engineering-methodology skills. |
-| 10 | MCP | Not started | `compile_engineering_context` exposed as an MCP tool; a real MCP client can call it and get a valid package back. |
+| 10 | MCP | ✅ Complete | `compile_engineering_context` exposed as an MCP tool; a real MCP client can call it and get a valid package back. |
 | 11 | Evaluation + Benchmarking | Not started | At least one "agent alone vs. agent+ECC" comparison run, with the metrics in [[07-evaluation]] measured, not just defined. |
 | 12 | VS Code Extension | Not started | Right-click "Compile Engineering Context" produces a preview the user can send to an agent; extension is a thin client over CLI/core. |
 | 13 | GitHub / CI Integrations | Not started | A PR gets ECC-compiled context (affected components, relevant tests, risk) posted or made available automatically. |
@@ -25,6 +25,5 @@ blanket authorization** — each phase requires its own explicit go-ahead (Rule 
 
 ## Next recommended phase
 
-**Phase 10 — MCP.** Expose `compile_engineering_context` as an MCP tool over the same
-`runContext` orchestrator the Phase 8 CLI and Phase 9 skill point to, so a real MCP client
-can call it and get a valid package back.
+**Phase 11 — Evaluation + Benchmarking.** Run at least one "agent alone vs. agent+ECC"
+comparison, measuring the metrics defined in [[07-evaluation]] rather than just defining them.

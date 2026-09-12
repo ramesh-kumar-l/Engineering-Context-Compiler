@@ -4,7 +4,7 @@ The context and evidence layer for AI-native software engineering: converts a me
 engineering task into the smallest, highest-value, evidence-backed context package an AI
 coding agent needs to solve it.
 
-**Status**: Phase 9 of 16 (Skill Integration). No MCP surface yet — see
+**Status**: Phase 10 of 16 (MCP). See
 [`project-memory-bank/implementation-status.md`](project-memory-bank/implementation-status.md)
 for what's built and [`project-memory-bank/05-roadmap.md`](project-memory-bank/05-roadmap.md)
 for the phase plan.
@@ -35,6 +35,25 @@ stdout. Flags:
 - `--path <dir>` — repository to analyze (default: current directory)
 - `--out <file>` — write the package to a file instead of stdout
 - `--budget <n>` — token budget for evidence selection (default: 4000)
+
+## MCP usage
+
+Build once, then run the MCP server over stdio and register it with any MCP client:
+
+```bash
+npm run build
+node dist/mcp/index.js
+```
+
+Exposes one tool, `compile_engineering_context`, over the same pipeline the CLI uses:
+
+- `task` (required) — free-text task description
+- `path` (optional) — repository to analyze (default: server's current directory)
+- `tokenBudget` (optional) — token budget for evidence selection (default: 4000)
+
+Returns the same schema-valid `EngineeringContextPackage` as the CLI, as the tool result's
+text content. A failure (bad path, invalid input) comes back as an MCP tool error
+(`isError: true`) rather than crashing the server.
 
 ## Agent skill
 

@@ -3,7 +3,8 @@
 Status: **design target**, partially implemented — see [[implementation-status]] for what
 actually exists (Phase 1: core types/schema; Phase 2: repository analysis; Phase 3: task
 classification; Phase 4: evidence retrieval; Phase 5: evidence ranking; Phase 6: context
-compilation; Phase 7: trust + provenance; Phase 8: CLI; Phase 9: skill integration).
+compilation; Phase 7: trust + provenance; Phase 8: CLI; Phase 9: skill integration; Phase 10:
+MCP).
 Recorded here so future phases don't re-derive the target shape and implementation stays
 aligned with the governing spec.
 
@@ -57,8 +58,7 @@ surface over the core: `ecc context "<task>"` (`src/cli/cli.ts` → `runContext.
 same `analyzeRepository` → `classifyTask` → `retrieveEvidence` → `rankEvidence` →
 `compileContext` pipeline above, adds a `RepositoryRef` (`repositoryRef.ts`, the missing
 `{name, commit}` piece core alone can't produce), and prints/writes the resulting
-`EngineeringContextPackage`. Phase 10 (MCP) is meant to be a similarly thin wrapper over
-`runContext`, not a reimplementation of it.
+`EngineeringContextPackage`.
 
 The **Skill** (Phase 9, `skills/ecc-context/SKILL.md`) is thinner still — it wraps the CLI,
 not core: it is pure instructions (frontmatter + markdown) telling an agent when to run
@@ -67,6 +67,16 @@ executable code of its own and no direct call into `runContext`. It is scoped to
 disjoint concern from any planning/coding/review skill an agent already has — "when/how to
 call ECC" only, never "how to engineer" — so it composes with rather than duplicates
 existing engineering-methodology skills, per its Phase 9 exit criteria.
+
+The **MCP server** (Phase 10, `src/mcp/`) is a third thin surface, structurally parallel to
+the CLI: `tool.ts` defines the `compile_engineering_context` tool's zod input schema and a
+handler that calls the same `runContext` pipeline the CLI uses, `server.ts` registers that
+tool on an `@modelcontextprotocol/sdk` `McpServer`, and `index.ts` is a shebang entry
+(`bin.ecc-mcp`) that connects it over stdio. No pipeline logic lives in `src/mcp/` — a wrong
+or divergent result there would mean a wrong `runContext`, not a wrong MCP wrapper. Unlike
+the CLI's process-exit-code error model, the tool handler never throws: any failure (bad
+path, invalid input, an internal validation error) comes back as a normal MCP `CallToolResult`
+with `isError: true`, since an MCP server must keep the connection alive across a bad call.
 
 ## EngineeringContextPackage (draft schema)
 

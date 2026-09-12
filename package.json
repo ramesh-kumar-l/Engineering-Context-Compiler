@@ -9,7 +9,8 @@
   },
   "main": "./src/index.ts",
   "bin": {
-    "ecc": "./dist/cli/index.js"
+    "ecc": "./dist/cli/index.js",
+    "ecc-mcp": "./dist/mcp/index.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -19,6 +20,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "typescript": "^5.7.3",
     "zod": "^3.24.1"
   },

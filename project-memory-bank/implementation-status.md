@@ -4,7 +4,7 @@ name: implementation-status
 
 # Implementation Status
 
-_Last updated: 2026-09-12 (Phase 9)_
+_Last updated: 2026-09-12 (Phase 10)_
 
 Update this file at the end of every major feature — it is the compressed "what actually
 exists" record so future tasks don't have to re-derive it by reading source.
@@ -17,6 +17,8 @@ exists" record so future tasks don't have to re-derive it by reading source.
   distribution matches the CLI-first strategy in the master prompt. Consolidating on one
   language across CLI + MCP + VS Code avoids polyglot maintenance overhead.
 - **Runtime schema validation**: `zod`.
+- **MCP**: `@modelcontextprotocol/sdk` (official reference SDK) — added in Phase 10 solely for
+  the `compile_engineering_context` tool server; not used anywhere else.
 - **AST parsing**: `typescript` compiler API, syntactic-only (no `Program`/type checker) —
   used to resolve top-level symbols and import specifiers. Moved from devDependency to
   dependency in Phase 2 since it's now used at runtime, not just for `tsc`.
@@ -46,6 +48,7 @@ src/
     trust/                # Phase 7: provenance guarantee + trust classification + conflicts
     index.ts              # barrel
   cli/                   # Phase 8: ecc CLI (see table below)
+  mcp/                   # Phase 10: MCP server (see table below)
   index.ts                # package public entry
 skills/
   ecc-context/SKILL.md    # Phase 9: agent-facing skill doc (when/how to call the CLI)
@@ -58,6 +61,7 @@ test/
   trust/                    # unit tests for Phase 7 modules
   cli/                      # unit + fixture-repo integration tests for Phase 8 CLI modules
   skill/                    # Phase 9: doc-consistency test for skills/ecc-context/SKILL.md
+  mcp/                      # Phase 10: real-MCP-client tests for src/mcp/
   fixtures/sample-repo/    # static fixture dir analyzed end-to-end by repositoryAnalyzer.test.ts
   fixtures/task-requests.json  # 54 labeled {request, expected TaskType} examples
 ```
@@ -285,19 +289,47 @@ markdown, not source code so the 300-line code-modularity rule doesn't strictly 
 kept under it anyway per the doc-consistency test) and `test/skill/skillDoc.test.ts` (34
 lines).
 
+## Implemented (Phase 10 — MCP)
+
+| Module | Path | What it does |
+|---|---|---|
+| Tool | `src/mcp/tool.ts` | `compileEngineeringContextTool(input)` — zod input shape (`task`, optional `path`/`tokenBudget`) + handler that calls `runContext` and returns a `CallToolResult`; never throws, returns `{isError: true, ...}` on any failure (bad path, invalid input, internal validation error) |
+| Server | `src/mcp/server.ts` | `createEccMcpServer()` — builds an `@modelcontextprotocol/sdk` `McpServer` and registers `compile_engineering_context` on it; does not connect a transport |
+| Entry point | `src/mcp/index.ts` | Shebang (`#!/usr/bin/env node`) thin wrapper connecting `createEccMcpServer()` over `StdioServerTransport` |
+
+`compile_engineering_context` now runs the identical pipeline the Phase 8 CLI runs
+(`runContext`), exposed as a real MCP tool over stdio (`bin.ecc-mcp` → `dist/mcp/index.js`),
+satisfying Phase 10's exit criteria directly. No `src/core` module changed; `src/mcp/` is
+structurally parallel to `src/cli/` (schema+handler / registration / entry point) per
+[[02-architecture]] and [[04-decisions]] #16.
+
+Tested three ways: (1) unit tests calling `compileEngineeringContextTool` directly against
+the fixture repo (valid package, budget-driven exclusion, error result for an unreadable
+path); (2) a real `@modelcontextprotocol/sdk` `Client` talking to `createEccMcpServer()` over
+`InMemoryTransport.createLinkedPair()` — an actual MCP client/server pair exchanging the real
+protocol, listing tools and calling `compile_engineering_context`, which is what the exit
+criteria literally asks for; (3) a manual one-off smoke test spawning the *built*
+`dist/mcp/index.js` as a subprocess via `StdioClientTransport`, confirming the shebang and
+real process wiring work end-to-end (mirrors the Phase 8 CLI smoke test). 113/113 tests
+passing overall (27 test files, up from 107/25), 0 lint/typecheck errors, 0 npm audit
+vulnerabilities. New runtime dependency: `@modelcontextprotocol/sdk`. New files ≤75 lines.
+
 ## Explicitly NOT built yet (do not assume these exist)
 
 - Conflict detection is structural only (same subject, differing `trustLevel`) — there is no
   semantic/content diff between two claims about the same file, since no such capability
   exists yet. A `path`+`identifier` collision with the *same* `trustLevel` is not flagged even
   if the underlying claims disagree in content.
-- No MCP server (Phase 10) — the CLI (optionally via the Phase 9 skill doc) is currently the
-  only invocable surface; no agent can call ECC as a tool without shelling out.
 - The Phase 9 skill only documents the CLI — it does not itself invoke `runContext` or ship
   any code; there is no automatic skill-discovery/install mechanism, a user/agent must copy
-  or symlink `skills/ecc-context/` into their own skills directory.
+  or symlink `skills/ecc-context/` into their own skills directory. It also does not yet
+  mention the Phase 10 MCP tool as an alternative invocation path (carried-forward open item).
 - The CLI has exactly one command (`context`) and one output format (pretty JSON) — no
   `--help`/`--version`, no subcommands, no machine-compact output mode.
+- The MCP server exposes exactly one tool (`compile_engineering_context`) over stdio only —
+  no resources, no prompts, no SSE/StreamableHTTP transport, no auth; `path` defaults to the
+  server process's own working directory when omitted, there is no per-call sandboxing/
+  workspace-root restriction beyond what the OS/filesystem already enforces.
 - No persistence/memory engine beyond the markdown files in this directory.
 - Repository analysis has no caching/incremental re-analysis — full walk every call; fine
   at current scale, revisit only if a real repo makes it a measured bottleneck.
@@ -310,4 +342,5 @@ lines).
 
 ## Next module to build
 
-Phase 10 (MCP) — see [[05-roadmap]] for exit criteria — is the next gated phase. Not started.
+Phase 11 (Evaluation + Benchmarking) — see [[05-roadmap]] for exit criteria — is the next
+gated phase. Not started.
