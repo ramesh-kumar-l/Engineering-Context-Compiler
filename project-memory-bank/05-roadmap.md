@@ -9,7 +9,7 @@ blanket authorization** — each phase requires its own explicit go-ahead (Rule 
 | 1 | ECC Foundation | ✅ Complete | Project scaffolding (build/lint/test/CI) in place; core types (`Task`, `Evidence`, `Trust`, `EngineeringContextPackage`) defined and zod-validated; tests/typecheck/lint/audit all green. |
 | 2 | Repository Intelligence | ✅ Complete | Can analyze a real repo: classify files, resolve symbols for at least one language, build a basic dependency graph — with tests against a real (or fixture) repo. |
 | 3 | Task Understanding | ✅ Complete | Given a free-text request, classify it into a `TaskType` (Section 25) with reasonable accuracy on a small labeled test set. |
-| 4 | Evidence Retrieval | Not started | Given a classified task + analyzed repo, retrieve a candidate evidence set (code/git/tests) relevant to the task. |
+| 4 | Evidence Retrieval | ✅ Complete | Given a classified task + analyzed repo, retrieve a candidate evidence set (code/git/tests) relevant to the task. |
 | 5 | Evidence Ranking | Not started | Candidate evidence is scored/ranked using >1 signal (Section 22); ranking is unit-tested against known-good orderings. |
 | 6 | Context Compilation | Not started | Ranked evidence is selected + compressed into a valid `EngineeringContextPackage` within a token budget, with `excluded` reasons populated. |
 | 7 | Trust + Provenance | Not started | Every included item carries provenance; FACT/DERIVED/INFERENCE/UNKNOWN is never blurred; conflicting evidence is surfaced, not silently resolved. |
@@ -25,6 +25,6 @@ blanket authorization** — each phase requires its own explicit go-ahead (Rule 
 
 ## Next recommended phase
 
-**Phase 4 — Evidence Retrieval.** Given a classified task (Phase 3's `classifyTask`) and
-an analyzed repo (Phase 2's `analyzeRepository`), retrieve a candidate evidence set
-(code/git/tests) relevant to the task.
+**Phase 5 — Evidence Ranking.** Score/rank the candidate evidence Phase 4's
+`retrieveEvidence` returns using more than one signal (Section 22), unit-tested against
+known-good orderings.

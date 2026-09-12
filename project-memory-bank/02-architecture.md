@@ -2,8 +2,8 @@
 
 Status: **design target**, partially implemented — see [[implementation-status]] for what
 actually exists (Phase 1: core types/schema; Phase 2: repository analysis; Phase 3: task
-classification). Recorded here so future phases don't re-derive the target shape and
-implementation stays aligned with the governing spec.
+classification; Phase 4: evidence retrieval). Recorded here so future phases don't
+re-derive the target shape and implementation stays aligned with the governing spec.
 
 ## Target shape
 
@@ -34,12 +34,13 @@ Core must stay independent of any specific UI or agent integration.
 ## Candidate components (implement only as each phase requires — do not build all at once)
 
 `TaskClassifier ✅, TaskNormalizer, RepositoryAnalyzer ✅, FileClassifier ✅, SymbolResolver ✅,
-DependencyAnalyzer ✅, EvidenceRetriever, GitHistoryAnalyzer, ContextRanker, ContextSelector,
+DependencyAnalyzer ✅, EvidenceRetriever ✅, GitHistoryAnalyzer ✅, ContextRanker, ContextSelector,
 ContextCompressor, TokenBudgetManager, ProvenanceEngine, TrustEngine, VerificationPlanner,
 ContextPackageBuilder, EvaluationEngine, MemoryEngine, AgentAdapter`
 
 ✅ = implemented: repository analysis (Phase 2, `src/core/repository/`), task classification
-(Phase 3, `src/core/task/`). All others: not started.
+(Phase 3, `src/core/task/`), evidence retrieval incl. git history (Phase 4,
+`src/core/evidence/`). All others: not started.
 
 ## EngineeringContextPackage (draft schema)
 

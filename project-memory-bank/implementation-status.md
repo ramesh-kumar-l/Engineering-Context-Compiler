@@ -4,7 +4,7 @@ name: implementation-status
 
 # Implementation Status
 
-_Last updated: 2026-09-12 (Phase 3)_
+_Last updated: 2026-09-12 (Phase 4)_
 
 Update this file at the end of every major feature — it is the compressed "what actually
 exists" record so future tasks don't have to re-derive it by reading source.
@@ -38,12 +38,14 @@ src/
     contextPackage.ts     # createEmptyContextPackage() factory
     repository/           # Phase 2: repo analysis (see table below)
     task/                 # Phase 3: task classification (see table below)
+    evidence/             # Phase 4: evidence retrieval (see table below)
     index.ts              # barrel
   index.ts                # package public entry
 test/
   core/contextPackage.test.ts
   repository/              # unit tests per module
   task/                     # unit tests + labeled-set accuracy test
+  evidence/                 # unit + fixture-repo integration tests per retriever
   fixtures/sample-repo/    # static fixture dir analyzed end-to-end by repositoryAnalyzer.test.ts
   fixtures/task-requests.json  # 54 labeled {request, expected TaskType} examples
 ```
@@ -108,9 +110,32 @@ tie-breaking). **Measured accuracy: 54/54 (100%) on the labeled set**; test asse
 passing overall (7 test files), 0 lint/typecheck errors, 0 npm audit vulnerabilities. All
 new files ≤128 lines.
 
+## Implemented (Phase 4 — Evidence Retrieval)
+
+| Module | Path | What it does |
+|---|---|---|
+| Keyword extractor | `src/core/evidence/keywordExtractor.ts` | `extractKeywords(text)` (stopword-filtered request tokens), `tokenizeIdentifier(name)` (splits camelCase/snake_case/kebab-case/paths into comparable words) |
+| Code retriever | `src/core/evidence/codeEvidenceRetriever.ts` | `retrieveCodeEvidence(task, repository)` — scores `source`-category files by keyword overlap against file path words and resolved symbol names; returns `EvidenceItem[]` (source `code`), capped at 50 candidates |
+| Test retriever | `src/core/evidence/testEvidenceRetriever.ts` | `retrieveTestEvidence(codeEvidence, repository)` — finds test files related to matched code, via dependency-graph edges (test imports source) and a naming-convention fallback (`foo.ts` <-> `foo.test.ts`) |
+| Git retriever | `src/core/evidence/gitEvidenceRetriever.ts` | `retrieveGitEvidence(repoRoot, paths)` — shells out to `git log` per path (`execFileSync`, array args, no shell interpolation) for recent commit history; returns `[]` gracefully (never throws) when not a git repo or git is unavailable |
+| Orchestrator | `src/core/evidence/evidenceRetriever.ts` | `retrieveEvidence(task, repository)` — runs code -> test -> git (git only for the top 10 code matches, bounding process spawns) and concatenates into one candidate `EvidenceItem[]` |
+
+Retrieval only, per the Phase 4 exit criteria — no cross-signal ranking beyond each
+retriever's own basic keyword-overlap relevance score (that is Phase 5's job). All evidence
+items conform to the existing `EvidenceItem`/`EvidenceProvenance` types from Phase 1
+(`src/core/types/evidence.ts`), so no schema changes were needed.
+
+Tested against `test/fixtures/sample-repo/` (same fixture as Phase 2) for code/test
+retrieval, and an isolated throwaway temp git repo (created and torn down per test via
+`mkdtemp`) for git retrieval, so results are deterministic and don't depend on this
+project's own commit history. 47/47 tests passing overall (12 test files, up from 34/7),
+0 lint/typecheck errors, 0 npm audit vulnerabilities, no new runtime dependency. All new
+files ≤77 lines.
+
 ## Explicitly NOT built yet (do not assume these exist)
 
-- No evidence retrieval, ranking, or compression logic (Phases 4-6).
+- No evidence ranking or context compression logic yet (Phases 5-6) — Phase 4's relevance
+  scores are a basic keyword-overlap heuristic per retriever, not a multi-signal ranking.
 - No CLI entry point / `bin` (Phase 8) — deliberately deferred; no invocable surface yet.
 - No skill or MCP server (Phases 9-10).
 - No build/bundle step (`tsc` is `noEmit`-only for now) — will be added when the CLI
@@ -127,5 +152,5 @@ new files ≤128 lines.
 
 ## Next module to build
 
-Phase 4 (Evidence Retrieval) — see [[05-roadmap]] for exit criteria — is the next gated
+Phase 5 (Evidence Ranking) — see [[05-roadmap]] for exit criteria — is the next gated
 phase. Not started.
