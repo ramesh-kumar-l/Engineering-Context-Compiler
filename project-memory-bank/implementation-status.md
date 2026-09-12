@@ -4,7 +4,7 @@ name: implementation-status
 
 # Implementation Status
 
-_Last updated: 2026-09-12 (Phase 5)_
+_Last updated: 2026-09-12 (Phase 6)_
 
 Update this file at the end of every major feature — it is the compressed "what actually
 exists" record so future tasks don't have to re-derive it by reading source.
@@ -39,6 +39,7 @@ src/
     repository/           # Phase 2: repo analysis (see table below)
     task/                 # Phase 3: task classification (see table below)
     evidence/             # Phase 4-5: evidence retrieval + ranking (see table below)
+    compilation/          # Phase 6: context compilation (see table below)
     index.ts              # barrel
   index.ts                # package public entry
 test/
@@ -46,6 +47,7 @@ test/
   repository/              # unit tests per module
   task/                     # unit tests + labeled-set accuracy test
   evidence/                 # unit + fixture-repo integration tests per retriever/ranker
+  compilation/              # unit + fixture-repo integration tests for Phase 6 modules
   fixtures/sample-repo/    # static fixture dir analyzed end-to-end by repositoryAnalyzer.test.ts
   fixtures/task-requests.json  # 54 labeled {request, expected TaskType} examples
 ```
@@ -154,10 +156,36 @@ test confirming code evidence ranks above test evidence for the same matched fil
 tests passing overall (13 test files, up from 47/12), 0 lint/typecheck errors, 0 npm audit
 vulnerabilities, no new runtime dependency. New files ≤80 lines.
 
+## Implemented (Phase 6 — Context Compilation)
+
+| Module | Path | What it does |
+|---|---|---|
+| Token budget | `src/core/compilation/tokenBudget.ts` | `estimateTokens(text)` (chars/4 heuristic), `estimateItemTokens(item)` (path+identifier+symbols text plus a flat per-item overhead), `DEFAULT_TOKEN_BUDGET` |
+| Compressor | `src/core/compilation/contextCompressor.ts` | `compressEvidenceItem(item)` — truncates `symbols` to `MAX_SYMBOLS_PER_ITEM` (8), returns a new object, never mutates |
+| Selector | `src/core/compilation/contextSelector.ts` | `selectEvidence(rankedEvidence, tokenBudget)` — walks ranked evidence in order, compressing + estimating each item, greedily including everything that still fits (skipping an oversized item without stopping, so a later smaller item can still fit); splits into `primary` (code/test) and `supporting` (everything else); returns `excluded: [{reason: 'token_budget_exceeded', count}]` for what didn't fit |
+| Compiler (orchestrator) | `src/core/compilation/contextCompiler.ts` | `compileContext(task, repository, rankedEvidence, options?)` — builds on Phase 1's `createEmptyContextPackage()` + Phase 5's `rankEvidence()` output, calls `selectEvidence()`, and returns a fully populated `EngineeringContextPackage` |
+
+Consumes Phase 5's ranked evidence as-is (does not re-rank); production-scale concerns
+handled here: a bounded, dependency-free token estimate (no tokenizer to install/version),
+a greedy rank-order fill so higher-priority evidence is never displaced by a same-cost
+lower-priority item, and an explicit, counted `excluded` reason so a caller (CLI, MCP, ...)
+can tell the user *why* an item was left out rather than getting a silently smaller package.
+See [[04-decisions]] #12 for the token-estimation and greedy-selection rationale.
+
+Tested with known-good selection/compression cases (generous budget keeps everything, tight
+budget excludes lower-ranked items with the right count, primary/supporting split by source
+type, a smaller later item fills space an earlier oversized item couldn't use, no mutation)
+plus a fixture-repo end-to-end test (`retrieveEvidence` → `rankEvidence` → `compileContext`)
+asserting the result validates against Phase 1's `validateContextPackage()` schema. 72/72
+tests passing overall (17 test files, up from 53/13), 0 lint/typecheck errors, 0 npm audit
+vulnerabilities, no new runtime dependency. New files ≤63 lines.
+
 ## Explicitly NOT built yet (do not assume these exist)
 
-- No context compression/selection logic yet (Phase 6) — ranking produces an ordered list
-  only; token-budget-aware selection and `excluded` reasons are Phase 6's job.
+- No provenance/trust enforcement yet (Phase 7) — `compileContext()` passes each
+  `EvidenceItem` through with whatever `provenance`/`confidence` it already had from
+  retrieval; nothing yet guarantees every included item carries provenance or flags
+  conflicting evidence.
 - No CLI entry point / `bin` (Phase 8) — deliberately deferred; no invocable surface yet.
 - No skill or MCP server (Phases 9-10).
 - No build/bundle step (`tsc` is `noEmit`-only for now) — will be added when the CLI
@@ -174,5 +202,5 @@ vulnerabilities, no new runtime dependency. New files ≤80 lines.
 
 ## Next module to build
 
-Phase 6 (Context Compilation) — see [[05-roadmap]] for exit criteria — is the next gated
+Phase 7 (Trust + Provenance) — see [[05-roadmap]] for exit criteria — is the next gated
 phase. Not started.

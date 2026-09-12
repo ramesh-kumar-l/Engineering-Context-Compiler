@@ -11,7 +11,7 @@ blanket authorization** — each phase requires its own explicit go-ahead (Rule 
 | 3 | Task Understanding | ✅ Complete | Given a free-text request, classify it into a `TaskType` (Section 25) with reasonable accuracy on a small labeled test set. |
 | 4 | Evidence Retrieval | ✅ Complete | Given a classified task + analyzed repo, retrieve a candidate evidence set (code/git/tests) relevant to the task. |
 | 5 | Evidence Ranking | ✅ Complete | Candidate evidence is scored/ranked using >1 signal (Section 22); ranking is unit-tested against known-good orderings. |
-| 6 | Context Compilation | Not started | Ranked evidence is selected + compressed into a valid `EngineeringContextPackage` within a token budget, with `excluded` reasons populated. |
+| 6 | Context Compilation | ✅ Complete | Ranked evidence is selected + compressed into a valid `EngineeringContextPackage` within a token budget, with `excluded` reasons populated. |
 | 7 | Trust + Provenance | Not started | Every included item carries provenance; FACT/DERIVED/INFERENCE/UNKNOWN is never blurred; conflicting evidence is surfaced, not silently resolved. |
 | 8 | CLI | Not started | `ecc context "<task>"` runs end-to-end against a real repo and prints/saves a valid context package; documented usage. |
 | 9 | Skill Integration | Not started | A Claude skill exists that teaches an agent when/how to invoke ECC, without duplicating existing engineering-methodology skills. |
@@ -25,6 +25,6 @@ blanket authorization** — each phase requires its own explicit go-ahead (Rule 
 
 ## Next recommended phase
 
-**Phase 6 — Context Compilation.** Select and compress Phase 5's ranked evidence into a
-valid `EngineeringContextPackage` within a token budget, populating `excluded` reasons for
-anything left out.
+**Phase 7 — Trust + Provenance.** Ensure every item in a compiled `EngineeringContextPackage`
+carries provenance, that FACT/DERIVED/INFERENCE/UNKNOWN trust levels are never blurred, and
+that conflicting evidence is surfaced rather than silently resolved.
