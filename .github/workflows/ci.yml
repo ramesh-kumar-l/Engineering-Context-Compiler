@@ -33,6 +33,8 @@ jobs:
           cache: npm
           cache-dependency-path: vscode-extension/package-lock.json
       - run: npm ci
+        working-directory: .
+      - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test

@@ -649,6 +649,34 @@ dependency**. New files ≤49 lines (`outcomeFeedback.ts`); largest touched file
   into Phase 15's risk scoring, Phase 5's static authority weights, or Phase 7's trust
   classification, all three of which remain hand-picked constants untouched by any outcome.
 
+## Documentation, golden examples, and blog series
+
+Separate from the 16-phase build (a documentation-only task, no product code touched — see
+[[04-decisions]] #23): `README.md` was rewritten and `docs/` created holding
+`NewbieQuickStarterGuide.md`, two golden end-to-end examples
+(`docs/examples/golden-example-01-debugging/`, `docs/examples/golden-example-02-refactoring/`,
+each with a purpose-built fixture repo, real captured CLI output, and a reproducible
+measurement script), and a five-post blog series (`docs/blogs/`). Every command, JSON payload,
+and metric in these documents was actually run and captured — none fabricated. Validated:
+`npm run typecheck`/`lint`/`test` (191/191) all still pass unchanged, confirming no product
+code was modified; every relative Markdown link across the new/changed docs resolves to a
+real file; the README's Quick Start command was re-run and its output re-diffed against what's
+documented.
+
+Two real findings surfaced while building the golden examples, documented rather than fixed
+(per this task's own "document, don't silently fix" instruction):
+- Golden Example 1 (`docs/examples/golden-example-01-debugging/README.md`, §13): a file with a
+  recorded incident memory entry tied to it still gets `"Risk: low"` from `assessRisk` (Phase
+  15), because risk scoring doesn't currently weight related incident/negative-outcome memory
+  into its score — noted in [[active-context]]'s open questions already, now with a concrete
+  reproducible instance.
+- Golden Example 2 (`docs/examples/golden-example-02-refactoring/README.md`, §13): the exact-
+  keyword-overlap retrieval limitation (already documented) has a concrete failure mode —
+  rewording a request from "duplicated user validation logic" to "duplicated ... validators"
+  changes both which files are retrieved (zero vs. both ground-truth files) **and** the
+  classified `task.type` (`refactor` vs. `modify`) — a reproducible instance of how sensitive
+  the current implementation is to exact phrasing.
+
 ## Next module to build
 
 None — all 16 phases in the master prompt's recommended sequence (see [[05-roadmap]]) are

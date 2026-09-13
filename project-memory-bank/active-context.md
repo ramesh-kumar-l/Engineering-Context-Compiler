@@ -4,12 +4,18 @@ name: active-context
 
 # Active Context
 
-_Last updated: 2026-09-12_
+_Last updated: 2026-09-13_
 
 ## Current phase
 
 **Phase 16 — Engineering Intelligence**: Complete. **All 16 phases in the master prompt's
 recommended sequence are now complete.**
+
+A separate, non-phase documentation/visibility task followed: rewrote `README.md`, created
+`docs/NewbieQuickStarterGuide.md`, two golden end-to-end examples under `docs/examples/`, and
+a five-post blog series under `docs/blogs/` — see [[implementation-status]]'s "Documentation,
+golden examples, and blog series" section and [[04-decisions]] #23. No product code changed;
+191/191 tests, lint, and typecheck all verified unchanged.
 
 ## What just happened
 

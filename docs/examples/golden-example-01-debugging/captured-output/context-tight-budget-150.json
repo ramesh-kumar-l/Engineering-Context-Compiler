@@ -1,0 +1,93 @@
+{
+  "version": "0.1",
+  "task": {
+    "type": "investigate",
+    "request": "investigate the intermittent timeout in the payment service"
+  },
+  "repository": {
+    "name": "golden-01-repo",
+    "commit": "06779fd40129d72548aa9ad5e21245913af14180"
+  },
+  "context": {
+    "primary": [
+      {
+        "source": "code",
+        "path": "src/paymentService.ts",
+        "symbols": [
+          "GATEWAY_TIMEOUT_MS"
+        ],
+        "relevance": 0.6,
+        "provenance": {
+          "source": "code",
+          "path": "src/paymentService.ts"
+        },
+        "trustLevel": "fact"
+      },
+      {
+        "source": "test",
+        "path": "test/paymentService.test.ts",
+        "relevance": 0.54,
+        "provenance": {
+          "source": "test",
+          "path": "test/paymentService.test.ts"
+        },
+        "trustLevel": "fact"
+      }
+    ],
+    "supporting": [
+      {
+        "source": "git",
+        "path": "src/notificationService.ts",
+        "identifier": "Initial checkout flow: orderService, paymentGateway, notificationService",
+        "relevance": 1,
+        "provenance": {
+          "source": "git",
+          "path": "src/notificationService.ts",
+          "commit": "276f0be8570242907c73c67d4df89ef5fa684911",
+          "timestamp": "2026-09-12"
+        },
+        "trustLevel": "fact"
+      },
+      {
+        "source": "git",
+        "path": "src/orderService.ts",
+        "identifier": "Initial checkout flow: orderService, paymentGateway, notificationService",
+        "relevance": 1,
+        "provenance": {
+          "source": "git",
+          "path": "src/orderService.ts",
+          "commit": "276f0be8570242907c73c67d4df89ef5fa684911",
+          "timestamp": "2026-09-12"
+        },
+        "trustLevel": "fact"
+      },
+      {
+        "source": "git",
+        "path": "src/paymentGateway.ts",
+        "identifier": "Initial checkout flow: orderService, paymentGateway, notificationService",
+        "relevance": 1,
+        "provenance": {
+          "source": "git",
+          "path": "src/paymentGateway.ts",
+          "commit": "276f0be8570242907c73c67d4df89ef5fa684911",
+          "timestamp": "2026-09-12"
+        },
+        "trustLevel": "fact"
+      }
+    ]
+  },
+  "conflicts": [],
+  "history": [],
+  "constraints": [],
+  "unknowns": [],
+  "verification": [
+    "Risk: low (no elevated risk factors detected)",
+    "Run the existing tests: test/paymentService.test.ts"
+  ],
+  "excluded": [
+    {
+      "reason": "token_budget_exceeded",
+      "count": 7
+    }
+  ]
+}

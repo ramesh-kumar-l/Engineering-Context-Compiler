@@ -48,3 +48,16 @@ not a flaw hidden by cherry-picked tasks: each task's ground truth is a narrow 2
 and ECC's supplementary git/test evidence (which the baseline never retrieves at all) counts
 as "irrelevant" under this metric's strict definition even though it's legitimate supporting
 context. Recorded as-is per [[04-decisions]] #17.
+
+## Golden examples as independent, reproducible measurements
+
+`docs/examples/golden-example-01-debugging/` and `docs/examples/golden-example-02-refactoring/`
+(see [[04-decisions]] #23) each ship a runnable `measure.mjs` calling this same
+`retrieveBaselineEvidence`/`runEvaluation` methodology against a small, purpose-built fixture
+repo, independent of the benchmark above. Results are consistent with this section's honest
+framing rather than uniformly favorable: Example 1 shows a clear ECC win under a tight budget
+(150 tokens: 33% vs. 100% recall, 0% vs. 100% provenance); Example 2 shows a real tie on file
+recall between the naive baseline and ECC at a generous budget, with ECC's advantage coming
+from provenance/memory/risk-scaled verification rather than recall. Neither result was
+cherry-picked to only show ECC winning — both are reported in full in each example's own
+README.
